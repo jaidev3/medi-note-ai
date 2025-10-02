@@ -1,0 +1,259 @@
+# =============================================================================
+# MULTI-STAGE DOCKERFILE FOR ECHO NOTES BACKEND
+# Stage 1: Builder (Heavy operations, gets discarded)
+# Stage 2: Production (Lightweight runtime)
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: BUILDER - Heavy build operations
+# =============================================================================
+FROM python:3.11-slim as builder
+
+# Build-time environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install build dependencies (these will be discarded)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    curl \
+    python3-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast package management
+RUN pip install --no-cache-dir uv
+
+# Set working directory for build
+WORKDIR /build
+
+# Copy dependency files
+COPY pyproject.toml uv.lock* ./
+
+# Create virtual environment and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies into virtual environment
+RUN uv pip install --no-cache -r pyproject.toml
+
+# Download spaCy model (this happens in builder stage)
+RUN python -m spacy download en_core_web_sm && \
+    python -m spacy validate
+
+# Clean up pip cache to reduce size
+RUN pip cache purge
+
+# =============================================================================
+# STAGE 2: PRODUCTION - Lightweight runtime image
+# =============================================================================
+FROM python:3.11-slim as production
+
+# Production environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install only RUNTIME dependencies (much lighter)
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy the virtual environment from builder stage (contains all Python packages)
+COPY --from=builder /opt/venv /opt/venv
+
+# Set working directory
+WORKDIR /code
+
+# Copy application code and configuration files
+COPY ./app ./app
+COPY ./alembic ./alembic
+COPY ./alembic.ini ./alembic.ini
+COPY ./run_migrations.py ./run_migrations.py
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN chown -R appuser:appuser /code
+USER appuser
+
+# Expose FastAPI port
+EXPOSE 8000
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Optimized startup command (removed --reload for production)
+CMD ["sh", "-c", "\
+    echo '🚀 Echo Notes Backend Starting...' && \
+    echo '🔄 Running database migrations...' && \
+    python run_migrations.py && \
+    echo '🌟 Starting FastAPI application...' && \
+    uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 \
+"]
+```
+
+Now let's create a production requirements file to optimize dependencies:
+
+```txt:requirements-prod.txt
+# =============================================================================
+# PRODUCTION REQUIREMENTS - OPTIMIZED FOR SMALLER IMAGE SIZE
+# Development and testing dependencies removed
+# =============================================================================
+
+# Core FastAPI Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Database & ORM
+sqlalchemy>=2.0.23
+alembic>=1.12.1
+psycopg[binary]>=3.1.12
+asyncpg>=0.29.0
+
+# Data Validation & Settings
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Security & Authentication
+bcrypt>=4.1.2
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+cryptography>=41.0.8
+
+# Environment & Configuration
+python-dotenv>=1.0.0
+
+# AI & Language Processing (ESSENTIAL ONLY)
+langchain-core>=0.1.0
+langchain-openai>=0.0.5
+openai>=1.6.0
+
+# OPTIMIZED: CPU-only PyTorch (saves ~3GB)
+torch-cpu>=2.1.0
+transformers>=4.35.0
+
+# Vector Database & Embeddings
+pgvector>=0.2.3
+
+# Document Processing
+pypdf2>=3.0.1
+python-docx>=0.8.11
+python-multipart>=0.0.6
+
+# HTTP Client & File Handling
+httpx>=0.25.2
+aiofiles>=23.2.0
+
+# PII Detection & Anonymization (if essential)
+presidio-analyzer>=2.2.359
+presidio-anonymizer>=2.2.357
+spacy>=3.8.7
+
+# Logging & Monitoring
+structlog>=23.2.0
+
+# Async & Concurrency
+anyio>=4.1.0
+greenlet>=3.2.4
+
+# Essential utilities
+email-validator>=2.1.0
+pyjwt>=2.10.1
+reportlab>=4.4.3
+```
+
+And update the pyproject.toml for production:
+
+```toml:pyproject-prod.toml
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Echo Notes Backend - Production Build"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.23",
+    "alembic>=1.12.1",
+    "psycopg[binary]>=3.1.12",
+    "asyncpg>=0.29.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "bcrypt>=4.1.2",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "cryptography>=41.0.8",
+    "python-dotenv>=1.0.0",
+    "langchain-core>=0.1.0",
+    "langchain-openai>=0.0.5",
+    "openai>=1.6.0",
+    "torch-cpu>=2.1.0",
+    "transformers>=4.35.0",
+    "pgvector>=0.2.3",
+    "pypdf2>=3.0.1",
+    "python-docx>=0.8.11",
+    "python-multipart>=0.0.6",
+    "httpx>=0.25.2",
+    "aiofiles>=23.2.0",
+    "presidio-analyzer>=2.2.359",
+    "presidio-anonymizer>=2.2.357",
+    "spacy>=3.8.7",
+    "structlog>=23.2.0",
+    "anyio>=4.1.0",
+    "greenlet>=3.2.4",
+    "email-validator>=2.1.0",
+    "pyjwt>=2.10.1",
+    "reportlab>=4.4.3",
+]
+```
+
+## 🔄 **How to Test the Multi-Stage Build**
+
+1. **Build the new image:**
+```bash
+# Build with new multi-stage Dockerfile
+docker build -t echo-notes-backend:optimized .
+
+# Check the size difference
+docker images | grep echo-notes-backend
+```
+
+2. **Test locally:**
+```bash
+# Update docker-compose.yaml to use new image
+docker-compose down
+docker-compose up --build
+```
+
+3. **Expected results:**
+   - **Current size**: ~12.2 GB
+   - **Expected size**: ~4-6 GB (50-60% reduction)
+
+## 📊 **What Happens in Each Stage**
+
+### **Builder Stage (Gets Discarded):**
+- ✅ Installs gcc, build tools (needed for compilation)
+- ✅ Downloads and compiles Python packages
+- ✅ Downloads spaCy models
+- ✅ Creates virtual environment with all dependencies
+- ❌ **Gets thrown away** - doesn't contribute to final image size
+
+### **Production Stage (Final Image):**
+- ✅ Copies only the compiled virtual environment
+- ✅ Installs minimal runtime libraries (libpq5)
+- ✅ Copies application code
+- ✅ Sets up non-root user for security
+- ✅ **This becomes your final 4-6 GB image**
+
+## 🚀 **Benefits for Your EC2 Deployment**
+
+1. **Cost Savings**: Smaller EBS volumes needed
+2. **Faster Deployments**: Quicker image pulls
+3. **Better Performance**: Less memory usage
+4. **Security**: Fewer attack vectors (no build tools in production)
+
+Would you like me to help you implement this step by step, starting with creating the new Dockerfile and testing it locally before we move to the EC2 deployment strategy?

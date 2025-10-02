@@ -1,0 +1,244 @@
+"""
+RAG (Retrieval-Augmented Generation) Service for AI Microservice
+Implements embedding generation for SOAP notes and vector operations
+"""
+import os
+import time
+import json
+import uuid
+import numpy as np
+from typing import List, Dict, Any, Optional
+import structlog
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+from langchain_openai import OpenAIEmbeddings
+
+from ai_service.app.schemas.rag_schemas import (
+    EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse,
+    SOAPEmbeddingRequest, SOAPEmbeddingResponse
+)
+from ai_service.app.config.settings import settings
+
+logger = structlog.get_logger(__name__)
+
+
+class RAGService:
+    """Service for RAG-based embedding generation and vector operations."""
+    
+    def __init__(self):
+        """Initialize RAG service with embeddings model."""
+        self.embeddings = None
+        self._initialize_models()
+    
+    def _initialize_models(self):
+        """Initialize embedding model."""
+        try:
+            logger.info("Initializing RAG embedding model")
+            
+            # Initialize OpenAI embeddings
+            self.embeddings = OpenAIEmbeddings(
+                model=settings.openai_embedding_model,
+                api_key=settings.openai_api_key
+            )
+            
+            logger.info("✅ RAG embedding model initialized successfully")
+            
+        except Exception as e:
+            logger.error("❌ Failed to initialize RAG embedding model", error=str(e))
+            raise RuntimeError(f"RAG model initialization failed: {e}")
+    
+    async def generate_embedding(self, request: EmbeddingRequest) -> EmbeddingResponse:
+        """
+        Generate embedding for a single text.
+        
+        Args:
+            request: Embedding request
+            
+        Returns:
+            EmbeddingResponse: Generated embedding
+        """
+        start_time = time.time()
+        
+        try:
+            logger.info("Generating embedding", text_length=len(request.text))
+            
+            if not self.embeddings:
+                raise RuntimeError("Embedding model not initialized")
+            
+            # Generate embedding
+            embedding_vector = await self.embeddings.aembed_query(request.text)
+            
+            # Normalize if requested
+            if request.normalize:
+                import numpy as np
+                embedding_array = np.array(embedding_vector, dtype=np.float32)
+                norm = np.linalg.norm(embedding_array)
+                if norm > 0:
+                    embedding_vector = (embedding_array / norm).tolist()
+            
+            processing_time = time.time() - start_time
+            
+            logger.info("✅ Embedding generated successfully", 
+                       dimension=len(embedding_vector),
+                       processing_time=processing_time)
+            
+            return EmbeddingResponse(
+                success=True,
+                embedding=embedding_vector,
+                dimension=len(embedding_vector),
+                processing_time=processing_time,
+                message="Embedding generated successfully"
+            )
+            
+        except Exception as e:
+            processing_time = time.time() - start_time
+            logger.error("❌ Embedding generation failed", error=str(e), processing_time=processing_time)
+            
+            return EmbeddingResponse(
+                success=False,
+                embedding=None,
+                dimension=0,
+                processing_time=processing_time,
+                message=f"Embedding generation failed: {str(e)}"
+            )
+    
+    async def generate_batch_embeddings(self, request: BatchEmbeddingRequest) -> BatchEmbeddingResponse:
+        """
+        Generate embeddings for multiple texts in batch.
+        
+        Args:
+            request: Batch embedding request
+            
+        Returns:
+            BatchEmbeddingResponse: Generated embeddings
+        """
+        start_time = time.time()
+        embeddings = []
+        processed_count = 0
+        failed_count = 0
+        
+        try:
+            logger.info("Generating batch embeddings", text_count=len(request.texts))
+            
+            if not self.embeddings:
+                raise RuntimeError("Embedding model not initialized")
+            
+            # Process texts in batches
+            for i in range(0, len(request.texts), request.batch_size):
+                batch = request.texts[i:i + request.batch_size]
+                
+                try:
+                    # Generate embeddings for batch
+                    batch_embeddings = await self.embeddings.aembed_documents(batch)
+                    
+                    # Normalize if requested
+                    if request.normalize:
+                        import numpy as np
+                        normalized_embeddings = []
+                        for embedding in batch_embeddings:
+                            embedding_array = np.array(embedding, dtype=np.float32)
+                            norm = np.linalg.norm(embedding_array)
+                            if norm > 0:
+                                normalized_embeddings.append((embedding_array / norm).tolist())
+                            else:
+                                normalized_embeddings.append(embedding)
+                        batch_embeddings = normalized_embeddings
+                    
+                    embeddings.extend(batch_embeddings)
+                    processed_count += len(batch)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to process batch {i//request.batch_size + 1}", error=str(e))
+                    failed_count += len(batch)
+                    # Add empty embeddings for failed texts
+                    embeddings.extend([[] for _ in batch])
+            
+            processing_time = time.time() - start_time
+            
+            logger.info("✅ Batch embeddings generated", 
+                       processed=processed_count,
+                       failed=failed_count,
+                       processing_time=processing_time)
+            
+            return BatchEmbeddingResponse(
+                success=failed_count == 0,
+                embeddings=embeddings,
+                processed_count=processed_count,
+                failed_count=failed_count,
+                processing_time=processing_time,
+                message=f"Processed {processed_count} texts, {failed_count} failed"
+            )
+            
+        except Exception as e:
+            processing_time = time.time() - start_time
+            logger.error("❌ Batch embedding generation failed", error=str(e), processing_time=processing_time)
+            
+            return BatchEmbeddingResponse(
+                success=False,
+                embeddings=[],
+                processed_count=0,
+                failed_count=len(request.texts),
+                processing_time=processing_time,
+                message=f"Batch embedding generation failed: {str(e)}"
+            )
+    
+    def _prepare_content_for_embedding(self, content: Dict[str, Any]) -> str:
+        """
+        Prepare SOAP note content for embedding.
+        
+        Args:
+            content: SOAP note content dictionary
+            
+        Returns:
+            str: Formatted text for embedding
+        """
+        try:
+            sections = []
+            
+            # Extract each SOAP section
+            for section_name in ['subjective', 'objective', 'assessment', 'plan']:
+                if section_name in content:
+                    section_data = content[section_name]
+                    if isinstance(section_data, dict) and 'content' in section_data:
+                        sections.append(f"{section_name.upper()}: {section_data['content']}")
+                    elif isinstance(section_data, str):
+                        sections.append(f"{section_name.upper()}: {section_data}")
+            
+            return "\n\n".join(sections)
+            
+        except Exception as e:
+            logger.error("Failed to prepare content for embedding", error=str(e))
+            return json.dumps(content)  # Fallback to JSON string
+    
+    async def embed_soap_note_content(self, content: Dict[str, Any]) -> Optional[List[float]]:
+        """
+        Generate embedding for SOAP note content.
+        
+        Args:
+            content: SOAP note content dictionary
+            
+        Returns:
+            Optional[List[float]]: Generated embedding vector or None if failed
+        """
+        try:
+            # Prepare content for embedding
+            content_text = self._prepare_content_for_embedding(content)
+            
+            # Generate embedding request
+            embedding_request = EmbeddingRequest(text=content_text, normalize=True)
+            
+            # Generate embedding
+            response = await self.generate_embedding(embedding_request)
+            
+            if response.success:
+                return response.embedding
+            else:
+                logger.error("Failed to generate SOAP note embedding", message=response.message)
+                return None
+                
+        except Exception as e:
+            logger.error("Failed to embed SOAP note content", error=str(e))
+            return None

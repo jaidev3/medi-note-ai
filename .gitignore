@@ -1,0 +1,757 @@
+# =============================================================================
+# ECHO NOTES MONOREPO - COMPREHENSIVE GITIGNORE
+# Protects sensitive data across Backend, AI Service, and Frontend
+# =============================================================================
+
+# =============================================================================
+# ENVIRONMENT FILES & SECRETS (CRITICAL - NEVER COMMIT THESE)
+# =============================================================================
+
+# All environment files - MOST IMPORTANT SECTION
+.env
+.env.*
+.environment
+*.env
+env.local
+env.production
+env.development
+env.staging
+env.test
+
+# Specific environment files for each service
+backend/.env
+backend/.env.*
+backend/env.*
+ai_service/.env
+ai_service/.env.*
+ai_service/env.*
+frontend/.env
+frontend/.env.*
+frontend/env.*
+
+# Environment backups and templates (keep samples)
+.env.backup
+.env.bak
+.env.old
+# But allow sample files
+!.env.sample
+!.env.example
+!env.sample
+!env.example
+!backend/.env.sample
+!ai_service/.env.sample
+!frontend/.env.sample
+
+# Secrets and credentials
+secrets/
+credentials/
+keys/
+certs/
+certificates/
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# API Keys and tokens in any format
+api_keys.txt
+api_keys.json
+tokens.txt
+tokens.json
+secrets.txt
+secrets.json
+credentials.txt
+credentials.json
+openai_key.txt
+huggingface_token.txt
+
+# Database credentials
+database.env
+db.env
+postgres.env
+
+# AWS credentials
+.aws/
+aws-credentials
+aws-config
+
+# JWT secrets
+jwt_secret.txt
+secret_key.txt
+
+# =============================================================================
+# AI/ML SPECIFIC FILES (IMPORTANT FOR AI SERVICE)
+# =============================================================================
+
+# Model files and caches
+models/
+*.model
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.tflite
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# HuggingFace cache directories
+.cache/huggingface/
+.cache/torch/
+transformers_cache/
+huggingface_cache/
+torch_cache/
+
+# Weights & Biases
+wandb/
+
+# TensorBoard logs
+runs/
+tensorboard/
+
+# Model checkpoints
+checkpoints/
+ckpt/
+*.ckpt
+
+# Dataset files (large data)
+data/
+datasets/
+training_data/
+*.csv
+*.tsv
+*.parquet
+*.feather
+
+# Embeddings and vectors
+embeddings/
+vectors/
+*.vec
+
+# spaCy models (downloaded)
+**/en_core_web_sm/
+**/en_core_web_md/
+**/en_core_web_lg/
+
+# =============================================================================
+# DOCKER & DEPLOYMENT SECRETS
+# =============================================================================
+
+# Docker override files (may contain secrets)
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-compose.local.yml
+docker-compose.local.yaml
+
+# Container data volumes
+volumes/
+postgres_data/
+pgdata/
+ai_cache/
+model_cache/
+
+# Deployment scripts with secrets
+deploy.sh
+deploy-local.sh
+*-deploy.sh
+deployment/
+scripts/deploy/
+
+# =============================================================================
+# PYTHON (BACKEND & AI SERVICE)
+# =============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#pdm.lock
+#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
+#   in version control.
+#   https://pdm.fming.dev/#use-with-ide
+.pdm.toml
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Virtual environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# uv (Python package manager)
+.uv/
+
+# =============================================================================
+# SSL CERTIFICATES & SECURITY FILES
+# =============================================================================
+
+# SSL certificates and private keys
+ssl/
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.der
+*.csr
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# GPG keys
+*.gpg
+*.asc
+
+# =============================================================================
+# LOGS & MONITORING (SENSITIVE DATA)
+# =============================================================================
+
+# Application logs (may contain sensitive data)
+logs/
+log/
+*.log
+app.log
+server.log
+error.log
+access.log
+debug.log
+audit.log
+uwsgi.log
+gunicorn.log
+celery.log
+nginx.log
+supervisor.log
+
+# Backend service logs
+backend/logs/
+backend/*.log
+
+# AI service logs
+ai_service/logs/
+ai_service/*.log
+
+# Frontend logs
+frontend/logs/
+frontend/*.log
+
+# Monitoring and metrics
+metrics/
+prometheus/
+grafana/
+
+# =============================================================================
+# DATABASE FILES & BACKUPS
+# =============================================================================
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Database dumps and backups (may contain sensitive data)
+*.dump
+*.sql
+*.backup
+*.bak
+backup/
+backups/
+database_backups/
+
+# =============================================================================
+# UPLOADS & USER CONTENT (POTENTIAL PII)
+# =============================================================================
+
+# User uploads (may contain sensitive medical data)
+uploads/
+media/
+static/media/
+user_files/
+documents/
+patient_files/
+medical_records/
+
+# Generated files
+generated/
+output/
+exports/
+
+# =============================================================================
+# TESTING FILES (MAY CONTAIN TEST DATA)
+# =============================================================================
+
+# Test data (may contain sensitive test cases)
+test_data/
+sample_data/
+mock_data/
+fixtures/
+
+# Test outputs
+test-results/
+test-reports/
+test_output/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be added to the global gitignore or merged into this project gitignore.  For a PyCharm
+#  project, it is recommended to include JetBrains specific entries in the project gitignore.
+#  Please refer to the template at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Snowpack dependency directory (https://snowpack.dev/)
+web_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# https://nextjs.org/blog/next-9-1#public-directory-support
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# vuepress v2.x temp and cache directory
+.temp
+.cache
+
+# Docusaurus cache and generated files
+.docusaurus
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Vite build output
+dist/
+dist-ssr/
+*.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+
+# =============================================================================
+# CONFIGURATION OVERRIDES (MAY CONTAIN SECRETS)
+# =============================================================================
+
+# Local configuration overrides
+config.local.*
+settings.local.*
+local_settings.py
+local_config.py
+config/local/
+settings/local/
+
+# =============================================================================
+# CI/CD & DEPLOYMENT (MAY CONTAIN SECRETS)
+# =============================================================================
+
+# Terraform state files (contain sensitive data)
+*.tfstate
+*.tfstate.backup
+.terraform/
+terraform.tfvars
+
+# Ansible (may contain secrets)
+*.retry
+ansible/vault/
+vault_pass.txt
+
+# Kubernetes secrets
+secrets.yaml
+secret.yaml
+*-secret.yaml
+*-secrets.yaml
+
+# Helm values with secrets
+values.local.yaml
+values.prod.yaml
+values.staging.yaml
+
+# =============================================================================
+# IMPORTANT: WHAT TO INCLUDE (OVERRIDE EXCLUSIONS)
+# =============================================================================
+
+# Always include these critical files
+!README.md
+!README.txt
+!LICENSE
+!LICENSE.txt
+!CHANGELOG.md
+!requirements.txt
+!requirements-*.txt
+!package.json
+!package-lock.json
+!yarn.lock
+!pyproject.toml
+!Dockerfile
+!docker-compose.yml
+!docker-compose.yaml
+!docker-compose.*.yml
+!docker-compose.*.yaml
+!.dockerignore
+!.github/
+!.gitignore
+!.gitattributes
+
+# Include sample/template files (SAFE versions)
+!*.sample
+!*.example
+!*.template
+!*_template.*
+!*_sample.*
+!*.env.sample
+!*.env.example
+!.env.sample
+!.env.example
+!backend/.env.sample
+!ai_service/.env.sample
+!frontend/.env.sample
+
+# Include important config files
+!tsconfig.json
+!next.config.*
+!tailwind.config.*
+!postcss.config.*
+!alembic.ini
+!components.json
+
+# Include build and deployment configs (without secrets)
+!nginx/nginx.conf
+!supervisord.conf
+
+# =============================================================================
+# ECHO NOTES SPECIFIC NOTES
+# =============================================================================
+#
+# This comprehensive .gitignore protects:
+#
+# 🔒 CRITICAL SECURITY:
+# ✅ All .env files and variants (.env.*, *.env, etc.)
+# ✅ API keys (OpenAI, HuggingFace, AWS)
+# ✅ JWT secrets and authentication tokens
+# ✅ Database credentials and connection strings
+# ✅ SSL certificates and private keys
+# ✅ AWS credentials and cloud configs
+#
+# 🤖 AI/ML PROTECTION:
+# ✅ Model weights and checkpoints (*.pt, *.pth, *.bin)
+# ✅ HuggingFace cache directories
+# ✅ Training data and datasets
+# ✅ Model embeddings and vectors
+# ✅ Downloaded spaCy models
+#
+# 🗄️ DATA PROTECTION:
+# ✅ Database files and backups
+# ✅ User uploads and medical records
+# ✅ Log files (may contain sensitive data)
+# ✅ Test data and fixtures
+#
+# 🐳 DEPLOYMENT PROTECTION:
+# ✅ Docker override files with secrets
+# ✅ Deployment scripts with credentials
+# ✅ Terraform state files
+# ✅ Kubernetes secret manifests
+#
+# 📝 DEVELOPMENT SAFETY:
+# ✅ IDE configurations with secrets
+# ✅ Local configuration overrides
+# ✅ Temporary files and caches
+# ✅ Build artifacts and node_modules
+#
+# REMEMBER:
+# 1. Create .env.sample files as templates
+# 2. Document all required environment variables
+# 3. Use proper secret management in production
+# 4. Regularly audit committed files for leaks
+# 5. Never commit real API keys or passwords
+# 6. Use environment variables for all secrets
+#
+# 🚨 BEFORE COMMITTING:
+# - Check: git status
+# - Verify: No .env files are staged
+# - Confirm: No API keys in code
+# - Review: All sensitive data excluded
+#
+# For Echo Notes specifically:
+# - OPENAI_API_KEY must never be committed
+# - HUGGINGFACEHUB_API_TOKEN must never be committed
+# - JWT_SECRET_KEY must never be committed
+# - Database passwords must never be committed
+# - Patient data must never be committed
+#
+# =============================================================================

@@ -1,0 +1,48 @@
+# Root level dockerignore for monorepo builds
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+IMPLEMENTATION_SUMMARY.md
+PII_INTEGRATION_*.md
+RAG_EMBEDDING_INTEGRATION.md
+DOCKER_PII_GUIDE.md
+FRONTEND_UPLOAD_EXAMPLE.md
+BACKEND_TODO.md
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Environment files (will be passed via docker-compose)
+.env
+.env.*
+
+# Scripts
+*.sh
+rebuild_with_pii.sh
+
+# Test files
+test_doc.txt
+health_check_pii.py
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+cd

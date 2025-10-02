@@ -1,0 +1,357 @@
+---
+alwaysApply: false
+---
+## 1) Role Enum
+
+```sql
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type WHERE typname = 'professional_role'
+  ) THEN
+    CREATE TYPE professional_role AS ENUM (
+      'Audiologists',
+      'Hearing Aid Specialists',
+      'ENT Physicians',
+      'Clinical Support Staff'
+    );
+  END IF;
+END $$;
+```
+
+---
+
+## 2) Audit Trigger (updates `updated_at` automatically)
+
+```sql
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+```
+
+---
+
+## 3) Tables
+
+### 3.1 `professional`
+
+```sql
+CREATE TABLE IF NOT EXISTS professional (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  role            professional_role NOT NULL,
+  department      VARCHAR(100),
+  employee_id     VARCHAR(50) UNIQUE,
+  name            VARCHAR(150) NOT NULL,
+  phone_number    VARCHAR(20),
+  email           VARCHAR(150) NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER trg_professional_updated
+BEFORE UPDATE ON professional
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Case-insensitive uniqueness for email
+CREATE UNIQUE INDEX IF NOT EXISTS ux_professional_email_ci
+  ON professional (lower(email));
+
+-- Optional fuzzy search on name (requires pg_trgm)
+-- CREATE INDEX IF NOT EXISTS ix_professional_name_trgm
+--   ON professional USING gin (name gin_trgm_ops);
+```
+
+### 3.2 `patients`
+
+```sql
+CREATE TABLE IF NOT EXISTS patients (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          VARCHAR(150),
+  email         VARCHAR(150) UNIQUE,
+  phone         VARCHAR(20),
+  address       TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER trg_patients_updated
+BEFORE UPDATE ON patients
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Case-insensitive unique email (coexists with column UNIQUE for clarity)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_patients_email_ci
+  ON patients (lower(email));
+
+CREATE INDEX IF NOT EXISTS ix_patients_phone ON patients (phone);
+
+-- Optional fuzzy search on name (requires pg_trgm)
+-- CREATE INDEX IF NOT EXISTS ix_patients_name_trgm
+--   ON patients USING gin (name gin_trgm_ops);
+```
+
+### 3.3 `patient_visit_sessions`
+
+```sql
+CREATE TABLE IF NOT EXISTS patient_visit_sessions (
+  session_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id       UUID NOT NULL REFERENCES patients(id) ON DELETE RESTRICT,
+  professional_id  UUID REFERENCES professional(id) ON DELETE SET NULL,
+  visit_date       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  notes            TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER trg_pvs_updated
+BEFORE UPDATE ON patient_visit_sessions
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Common access paths
+CREATE INDEX IF NOT EXISTS ix_pvs_patient_date
+  ON patient_visit_sessions (patient_id, visit_date DESC);
+
+CREATE INDEX IF NOT EXISTS ix_pvs_professional_date
+  ON patient_visit_sessions (professional_id, visit_date DESC);
+
+CREATE INDEX IF NOT EXISTS ix_pvs_visit_date
+  ON patient_visit_sessions (visit_date);
+```
+
+### 3.4 `uploaded_documents`
+
+```sql
+CREATE TABLE IF NOT EXISTS uploaded_documents (
+  document_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id    UUID NOT NULL REFERENCES patient_visit_sessions(session_id) ON DELETE CASCADE,
+  created_time  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  s3_upload_link TEXT NOT NULL,
+  document_name VARCHAR(200) NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Ensure (session_id, document_id) is addressable for composite FK from notes
+  UNIQUE (session_id, document_id)
+);
+
+CREATE TRIGGER trg_uploaded_documents_updated
+BEFORE UPDATE ON uploaded_documents
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Fast lookup of session docs by recency
+CREATE INDEX IF NOT EXISTS ix_docs_session_time
+  ON uploaded_documents (session_id, created_time DESC);
+```
+
+### 3.5 `session_soap_notes`
+
+> `document_id` is **mandatory** and must belong to the **same** `session_id` via a composite FK.
+
+```sql
+CREATE TABLE IF NOT EXISTS session_soap_notes (
+  note_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id       UUID NOT NULL,
+  document_id      UUID NOT NULL,
+  ai_approved      BOOLEAN NOT NULL DEFAULT false,
+  user_approved    BOOLEAN NOT NULL DEFAULT false,
+  professional_id  UUID REFERENCES professional(id) ON DELETE SET NULL,
+  content          JSONB NOT NULL,
+  context_data     JSONB,
+  -- Generated full-text vector over SOAP content
+  content_fts      tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(content->>'subjective','')), 'A') ||
+    setweight(to_tsvector('english', coalesce(content->>'objective','')),  'B') ||
+    setweight(to_tsvector('english', coalesce(content->>'assessment','')), 'A') ||
+    setweight(to_tsvector('english', coalesce(content->>'plan','')),       'A')
+  ) STORED,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- FKs
+  CONSTRAINT fk_notes_session
+    FOREIGN KEY (session_id)
+    REFERENCES patient_visit_sessions(session_id)
+    ON DELETE CASCADE,
+
+  -- Critical: enforce the document belongs to the same session
+  CONSTRAINT fk_notes_session_document
+    FOREIGN KEY (session_id, document_id)
+    REFERENCES uploaded_documents(session_id, document_id)
+    ON DELETE RESTRICT
+);
+
+CREATE TRIGGER trg_session_soap_notes_updated
+BEFORE UPDATE ON session_soap_notes
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Access patterns
+CREATE INDEX IF NOT EXISTS ix_notes_session_time
+  ON session_soap_notes (session_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS ix_notes_professional
+  ON session_soap_notes (professional_id);
+
+CREATE INDEX IF NOT EXISTS ix_notes_document
+  ON session_soap_notes (document_id);
+
+-- Approval queues (partial indexes)
+CREATE INDEX IF NOT EXISTS ix_notes_pending_user_approval
+  ON session_soap_notes (session_id)
+  WHERE user_approved = false;
+
+CREATE INDEX IF NOT EXISTS ix_notes_pending_ai_approval
+  ON session_soap_notes (session_id)
+  WHERE ai_approved = false;
+
+-- Combined approval filter (if you often query both flags)
+CREATE INDEX IF NOT EXISTS ix_notes_approval_combo
+  ON session_soap_notes (user_approved, ai_approved);
+
+-- JSONB search support
+CREATE INDEX IF NOT EXISTS ix_notes_content_gin
+  ON session_soap_notes USING gin (content jsonb_path_ops);
+
+CREATE INDEX IF NOT EXISTS ix_notes_context_gin
+  ON session_soap_notes USING gin (context_data jsonb_path_ops);
+
+-- Full-text search over SOAP sections
+CREATE INDEX IF NOT EXISTS ix_notes_content_fts
+  ON session_soap_notes USING gin (content_fts);
+```
+
+---
+
+## Referential Integrity Summary
+
+- **Sessions → Docs**: `uploaded_documents.session_id` references `patient_visit_sessions.session_id` (CASCADE on delete).
+- **Sessions → Notes**: `session_soap_notes.session_id` references `patient_visit_sessions.session_id` (CASCADE on delete).
+- **Notes → Docs (same session)**: composite FK `(session_id, document_id)` guarantees the note’s `document_id` belongs to the same session; `document_id` is **NOT NULL**.
+- **Professional references** set to **NULL** on delete to preserve history.
+
+---
+
+## Common Query Patterns (fast with above indexes)
+
+```sql
+-- Patient timeline
+SELECT * FROM patient_visit_sessions
+WHERE patient_id = $1
+ORDER BY visit_date DESC
+LIMIT 50;
+
+-- Professional’s sessions (latest first)
+SELECT * FROM patient_visit_sessions
+WHERE professional_id = $1
+ORDER BY visit_date DESC
+LIMIT 50;
+
+-- Session documents (newest first)
+SELECT * FROM uploaded_documents
+WHERE session_id = $1
+ORDER BY created_time DESC;
+
+-- Latest SOAP note for a session
+SELECT * FROM session_soap_notes
+WHERE session_id = $1
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- Approval queues
+SELECT note_id FROM session_soap_notes
+WHERE user_approved = false
+ORDER BY created_at ASC
+LIMIT 100;
+
+-- Full-text search across SOAP content
+SELECT note_id, ts_rank(content_fts, plainto_tsquery('english', $1)) AS rank
+FROM session_soap_notes
+WHERE content_fts @@ plainto_tsquery('english', $1)
+ORDER BY rank DESC
+LIMIT 50;
+```
+
+---
+
+## AUDIT LOG
+
+### Audit Log Table
+
+**Table Name:** `audit_log`
+
+**Purpose:** Stores application-level user activity events for auditing and compliance purposes.
+
+**Schema:**
+
+| Column Name   | Type        | Constraints                        | Description                                                                                                |
+| ------------- | ----------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| id            | BIGSERIAL   | PRIMARY KEY                        | Unique log entry ID                                                                                        |
+| user_id       | BIGINT      | NOT NULL, FOREIGN KEY → `users.id` | ID of user performing the action                                                                           |
+| event_type    | VARCHAR(50) | NOT NULL                           | Type of event (e.g., `USER_LOGIN`, `USER_LOGOUT`, `TRANSCRIPT_UPLOAD`, `TRANSCRIPT_APPROVAL`, `RAG_QUERY`) |
+| event_details | JSONB       | NULLABLE                           | Additional metadata (e.g., file name, query text)                                                          |
+| ip_address    | INET        | NULLABLE                           | IP address of the requester                                                                                |
+| user_agent    | TEXT        | NULLABLE                           | User-Agent string from HTTP request                                                                        |
+| created_at    | TIMESTAMP   | NOT NULL DEFAULT CURRENT_TIMESTAMP | Time of event occurrence                                                                                   |
+
+**Indexes:**
+
+- `idx_audit_log_user_id` on `user_id`
+- `idx_audit_log_event_type` on `event_type`
+- `idx_audit_log_created_at` on `created_at`
+
+**Sample Event Types:**
+
+- `USER_LOGIN`
+- `USER_LOGOUT`
+- `TRANSCRIPT_UPLOAD`
+- `TRANSCRIPT_APPROVAL`
+- `RAG_QUERY`
+
+---
+
+**Example Minimal Logger Service (Python/FastAPI):**
+
+```python
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import insert
+from app.models import AuditLog  # SQLAlchemy model for audit_log table
+import datetime
+
+async def log_event(
+    db: AsyncSession,
+    user_id: int,
+    event_type: str,
+    event_details: dict | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+):
+    await db.execute(
+        insert(AuditLog).values(
+            user_id=user_id,
+            event_type=event_type,
+            event_details=event_details,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            created_at=datetime.datetime.utcnow()
+        )
+    )
+    await db.commit()
+```
+
+## Minimal Seed/Grant (sketch)
+
+```sql
+-- Example: grant read to app role
+-- GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_read;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_read;
+```
+
+---
+
+## Notes on Scaling (optional)
+
+- If row counts for `patient_visit_sessions` grow to 10M+, consider **monthly partitioning** by `visit_date`.
+- Monitor GIN index bloat; schedule regular `VACUUM (ANALYZE)`.
+
+---
+
+**Done.**

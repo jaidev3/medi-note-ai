@@ -1,0 +1,93 @@
+---
+alwaysApply: true
+---
+## 3. Database Design
+
+> Full schema in `database_schema.md`.
+> reference: @database_schema.mdc
+
+### Key Tables
+
+- **Professional**: Stores healthcare professional details.
+- **Patients**: Stores patient data.
+- **Patient Visit Sessions**: Links patients to professionals per visit.
+- **Uploaded-documents**: Metadata about uploaded files.
+- **Session SOAP Notes**: Stores AI-generated SOAP + contextual data.
+
+Postgres DB will have **pgvector extension** enabled for vector search.
+
+---
+
+## 4. Architecture Layers
+
+1. **Routes (/routers)**: HTTP endpoints.
+2. **Controllers (/controller)**: Orchestrate service calls.
+3. **Services (/services)**: Business logic (authentication, RAG, transcription, SOAP generation, etc.).
+4. **Data (/data)**: SQLAlchemy repository/DAO classes for DB operations.
+5. **Models (/models)**: SQLAlchemy ORM models.
+6. **Schemas (/schemas)**: Pydantic request/response DTOs.
+7. **Database (/database)**: Engine, session, dependency injection.
+8. **Utils (/utils)**: Validators, encryption, security, logging.
+
+---
+
+## 5. Tech Stack & Packages
+
+###
+
+uv package manager for all add, sycn , run commands
+
+### Core
+
+- **fastapi** – Web framework
+- **sqlalchemy** – ORM (async)
+- **alembic** – DB migrations
+- **pydantic** – Data validation
+- **python-dotenv** – Env var loading
+- **bcrypt** – Password hashing
+- **pycorg** – Encryption utilities
+- **langchain** – AI orchestration (loaders, parsers, pipelines)
+- **langchain-core**, **langchain-community** – LangChain 2025 modular packages
+- **psycopg** – Postgres driver with async support
+- Other packages as per requirement
+
+### Database
+
+- Postgres with **pgvector** extension
+- Dockerized with `docker-compose` for local + prod
+
+---
+
+## 6. Deployment
+
+- Backend + Postgres (pgvector-enabled) in Docker containers.
+- S3 credentials from env vars for document storage.
+- Secure configuration via `.env`.
+
+---
+
+## 7. Security
+
+- **bcrypt** for password hashing.
+- JWT with refresh tokens.
+- HTTPS everywhere in production.
+- S3 uploads encrypted at rest.
+- Encrypted database fields for sensitive data.
+- Compliance with medical data handling standards.
+- The Clinical Support Staff have read only access for all documents except creating a new patient.
+
+---
+
+## 8. Future Enhancements
+
+- Fine-tune domain-specific LLM for SOAP generation.
+- Implement audit logging for compliance.
+- Add rate-limiting and anomaly detection for security.
+- Expand RAG to include external medical knowledge bases.
+
+### NOTE
+
+- DO NOT OVERCOMPLICATE THE IMPLEMENTATIONS . DO NOT USE PLACEHOLDERS AS FALLBACK. ALWAYS PROVIDE REAL TIME DATA as per the flow.
+- USE GRACIOUS ERROR HANDLING THAT CAN BE EASILY DEBUGGED WITH PRINT STATEMENTS.
+- WHENVER RUNNING A CMD / TERMINAL COMMAND . CHECK CURRENT FOLDER
+- USE uv package manager only for adding packages . NEVER DO GLOBAL INSTALLATIONS
