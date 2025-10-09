@@ -5,8 +5,8 @@ import structlog
 
 from fastapi import APIRouter, HTTPException, status
 
-from ai_service.app.schemas.ner_schemas import NERRequest, NERResponse
-from ai_service.app.services.ner_service import NERService
+from schemas.ner_schemas import NERRequest, NERResponse
+from services.ner_service import NERService
 
 logger = structlog.get_logger(__name__)
 

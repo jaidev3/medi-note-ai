@@ -13,7 +13,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-from ai_service.app.config.settings import settings
+from config.settings import settings
 
 # Configure structured logging
 structlog.configure(
@@ -164,7 +164,7 @@ async def model_status():
 
 
 # Include API routers
-from ai_service.app.api import soap_api, ner_api, pii_api, embeddings_api
+from api import soap_api, ner_api, pii_api, embeddings_api
 
 app.include_router(soap_api.router, prefix="/soap", tags=["SOAP Generation"])
 app.include_router(ner_api.router, prefix="/ner", tags=["NER Extraction"])

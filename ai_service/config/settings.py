@@ -31,7 +31,9 @@ class AIServiceSettings(BaseSettings):
     )
     
     # Google Gemini Configuration (Primary)
-    google_api_key: str = Field(description="Google Gemini API key")
+    # Make API key optional so the service can start without it; components that
+    # require the key should check and raise a runtime error if they need it.
+    google_api_key: Optional[str] = Field(default=None, description="Google Gemini API key (optional)")
     gemini_model: str = Field(
         default="gemini-1.5-flash", 
         description="Gemini model for generation (flash, pro, or pro-vision)"

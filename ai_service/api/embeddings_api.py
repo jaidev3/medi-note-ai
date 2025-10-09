@@ -5,12 +5,12 @@ import structlog
 
 from fastapi import APIRouter, HTTPException, status
 
-from ai_service.app.schemas.rag_schemas import (
+from schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse,
     BatchEmbeddingRequest, BatchEmbeddingResponse,
     SOAPEmbeddingRequest, SOAPEmbeddingResponse
 )
-from ai_service.app.services.rag_service import RAGService
+from services.rag_service import RAGService
 
 logger = structlog.get_logger(__name__)
 

@@ -12,12 +12,12 @@ from datetime import datetime
 import structlog
 import google.generativeai as genai
 
-from ai_service.app.schemas.soap_schemas import (
+from schemas.soap_schemas import (
     SOAPNote, SOAPSection, SOAPGenerationRequest, 
     SOAPGenerationResponse, JudgeLLMResponse
 )
-from ai_service.app.schemas.ner_schemas import NEROutput
-from ai_service.app.config.settings import settings
+from schemas.ner_schemas import NEROutput
+from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 

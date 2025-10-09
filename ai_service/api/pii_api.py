@@ -5,11 +5,11 @@ import structlog
 
 from fastapi import APIRouter, HTTPException, status
 
-from ai_service.app.schemas.pii_schemas import (
+from schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse,
     PIIAnonymizationRequest, PIIAnonymizationResponse
 )
-from ai_service.app.services.pii_service import PIIService
+from services.pii_service import PIIService
 
 logger = structlog.get_logger(__name__)
 

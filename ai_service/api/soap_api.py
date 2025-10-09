@@ -7,10 +7,10 @@ import structlog
 
 from fastapi import APIRouter, HTTPException, status
 
-from ai_service.app.schemas.soap_schemas import SOAPGenerationRequest, SOAPGenerationResponse
-from ai_service.app.services.soap_service import SOAPGenerationService
-from ai_service.app.services.ner_service import NERService
-from ai_service.app.services.pii_service import PIIService
+from schemas.soap_schemas import SOAPGenerationRequest, SOAPGenerationResponse
+from services.soap_service import SOAPGenerationService
+from services.ner_service import NERService
+from services.pii_service import PIIService
 
 logger = structlog.get_logger(__name__)
 
@@ -55,7 +55,7 @@ async def generate_soap_note(request: SOAPGenerationRequest):
         
         if request.enable_pii_masking:
             logger.info("🔒 Applying PII masking")
-            from ai_service.app.schemas.pii_schemas import PIIAnonymizationRequest
+            from schemas.pii_schemas import PIIAnonymizationRequest
             
             pii_request = PIIAnonymizationRequest(
                 text=request.text,

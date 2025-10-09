@@ -110,10 +110,10 @@ AI_SERVICE_LOG_LEVEL=INFO
 
    ```bash
    # Using uv (recommended)
-   uv run python -m uvicorn ai_service.app.main:app --host 0.0.0.0 --port 8002 --reload
+   uv run python -m uvicorn ai_service.main:app --host 0.0.0.0 --port 8002 --reload
 
    # Or using python directly
-   python -m uvicorn ai_service.app.main:app --host 0.0.0.0 --port 8002 --reload
+   python -m uvicorn ai_service.main:app --host 0.0.0.0 --port 8002 --reload
    ```
 
 ## Docker Deployment

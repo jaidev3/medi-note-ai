@@ -15,11 +15,11 @@ import google.generativeai as genai
 # Load environment variables
 load_dotenv()
 
-from ai_service.app.schemas.rag_schemas import (
+from schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse,
     SOAPEmbeddingRequest, SOAPEmbeddingResponse
 )
-from ai_service.app.config.settings import settings
+from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 

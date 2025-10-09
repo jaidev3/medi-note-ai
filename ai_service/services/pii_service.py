@@ -9,11 +9,11 @@ import re
 from typing import List, Optional, Tuple
 import google.generativeai as genai
 
-from ai_service.app.schemas.pii_schemas import (
+from schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse, PIIEntity,
     PIIAnonymizationRequest, PIIAnonymizationResponse
 )
-from ai_service.app.config.settings import settings
+from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
