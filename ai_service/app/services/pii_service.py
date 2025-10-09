@@ -1,49 +1,44 @@
 """
 PII (Personally Identifiable Information) Detection and Anonymization Service for AI Microservice
-Uses Microsoft Presidio for PII detection and anonymization
+Uses Google Gemini for PII detection and anonymization
 """
 
 import structlog
+import json
+import re
 from typing import List, Optional, Tuple
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
+import google.generativeai as genai
 
 from ai_service.app.schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse, PIIEntity,
     PIIAnonymizationRequest, PIIAnonymizationResponse
 )
+from ai_service.app.config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
 
 class PIIService:
-    """Service for PII detection and anonymization using Microsoft Presidio."""
+    """Service for PII detection and anonymization using Google Gemini."""
     
     def __init__(self):
-        """Initialize the PII service with Presidio components."""
+        """Initialize the PII service with Gemini."""
         try:
-            logger.info("🔍 Initializing PII service")
+            logger.info("🔍 Initializing PII service with Gemini")
             
-            # Configure NLP engine
-            logger.info("🔍 Configuring NLP engine")
-            nlp_configuration = {
-                "nlp_engine_name": "spacy",
-                "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}]
-            }
+            # Configure Gemini API
+            genai.configure(api_key=settings.google_api_key)
             
-            # Create NLP engine provider
-            logger.info("🔍 Creating NLP engine provider")
-            provider = NlpEngineProvider(nlp_configuration=nlp_configuration)
-            nlp_engine = provider.create_engine()
-            
-            # Initialize analyzer
-            logger.info("🔍 Initializing Presidio analyzer")
-            self.analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
-            
-            # Initialize anonymizer
-            logger.info("🔍 Initializing Presidio anonymizer")
-            self.anonymizer = AnonymizerEngine()
+            # Initialize Gemini model
+            self.model = genai.GenerativeModel(
+                model_name=settings.gemini_model,
+                generation_config={
+                    "temperature": 0.1,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": 2048,
+                }
+            )
             
             # Set default entities to detect
             self.default_entities = [
@@ -56,11 +51,76 @@ class PIIService:
             # Set default score threshold
             self.default_score_threshold = 0.5
             
-            logger.info("✅ PII service initialized successfully")
+            logger.info("✅ PII service initialized successfully with Gemini")
             
         except Exception as e:
             logger.error("❌ Failed to initialize PII service", error=str(e))
             raise RuntimeError(f"PII service initialization failed: {e}")
+    
+    def _create_analysis_prompt(self, text: str, entities: List[str]) -> str:
+        """Create prompt for Gemini to analyze PII."""
+        return f"""Analyze the following text for personally identifiable information (PII). Return ONLY a JSON array.
+
+Text to analyze:
+{text}
+
+Detect these PII entity types: {', '.join(entities)}
+
+Return format (JSON only, no other text):
+[
+  {{
+    "entity_type": "PERSON",
+    "start": 0,
+    "end": 10,
+    "score": 0.95,
+    "text": "extracted text"
+  }}
+]
+
+Rules:
+- Use exact entity type names from the provided list
+- Include exact character positions (start, end)
+- Score between 0.0 and 1.0 (confidence)
+- Return empty array [] if no PII found
+"""
+    
+    def _create_anonymization_prompt(self, text: str, entities: List[str], preserve_medical: bool) -> str:
+        """Create prompt for Gemini to anonymize PII."""
+        medical_note = ""
+        if preserve_medical:
+            medical_note = "\n- PRESERVE medical terms, conditions, procedures, and clinical information"
+        
+        return f"""Anonymize personally identifiable information (PII) in the following clinical text while maintaining medical context.
+
+Text to anonymize:
+{text}
+
+PII types to anonymize: {', '.join(entities)}
+
+Return TWO things in JSON format:
+1. anonymized_text: The text with PII replaced
+2. entities: Array of detected PII entities
+
+Return format (JSON only):
+{{
+  "anonymized_text": "Text with [PERSON], [EMAIL], etc. replacing PII",
+  "entities": [
+    {{
+      "entity_type": "PERSON",
+      "start": 0,
+      "end": 10,
+      "score": 0.95,
+      "text": "original text"
+    }}
+  ]
+}}
+
+Rules:
+- Replace PII with [ENTITY_TYPE] placeholders
+- Maintain sentence structure and readability{medical_note}
+- Include all detected entities in the entities array
+- Return empty entities array [] if no PII found
+"""
     
     async def analyze_text(self, request: PIIAnalysisRequest) -> PIIAnalysisResponse:
         """
@@ -73,34 +133,51 @@ class PIIService:
             PIIAnalysisResponse: Analysis results with detected entities
         """
         try:
-            logger.info("Starting PII analysis", text_length=len(request.text))
+            logger.info("Starting Gemini PII analysis", text_length=len(request.text))
             
             # Use provided entities or defaults
             entities_to_detect = request.entities if request.entities else self.default_entities
             
-            # Analyze text for PII
-            results = self.analyzer.analyze(
-                text=request.text,
-                entities=entities_to_detect,
-                language=request.language,
-                score_threshold=request.score_threshold
-            )
+            # Create prompt
+            prompt = self._create_analysis_prompt(request.text, entities_to_detect)
+            
+            # Generate response from Gemini
+            response = self.model.generate_content(prompt)
+            response_text = response.text.strip()
+            
+            # Parse JSON response
+            try:
+                # Remove markdown code blocks if present
+                if response_text.startswith("```json"):
+                    response_text = response_text.replace("```json", "").replace("```", "").strip()
+                elif response_text.startswith("```"):
+                    response_text = response_text.replace("```", "").strip()
+                
+                results = json.loads(response_text)
+            except json.JSONDecodeError:
+                # Try to extract JSON array
+                json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+                if json_match:
+                    results = json.loads(json_match.group(0))
+                else:
+                    results = []
             
             # Convert results to our schema
             detected_entities = []
             for result in results:
-                entity = PIIEntity(
-                    entity_type=result.entity_type,
-                    start=result.start,
-                    end=result.end,
-                    score=result.score,
-                    text=request.text[result.start:result.end]
-                )
-                detected_entities.append(entity)
+                if result.get("score", 0) >= request.score_threshold:
+                    entity = PIIEntity(
+                        entity_type=result.get("entity_type", "UNKNOWN"),
+                        start=result.get("start", 0),
+                        end=result.get("end", 0),
+                        score=result.get("score", 0.9),
+                        text=result.get("text", "")
+                    )
+                    detected_entities.append(entity)
             
             has_pii = len(detected_entities) > 0
             
-            logger.info("✅ PII analysis completed", 
+            logger.info("✅ Gemini PII analysis completed", 
                        entities_found=len(detected_entities),
                        has_pii=has_pii)
             
@@ -114,7 +191,7 @@ class PIIService:
             )
             
         except Exception as e:
-            logger.error("❌ PII analysis failed", error=str(e))
+            logger.error("❌ Gemini PII analysis failed", error=str(e))
             return PIIAnalysisResponse(
                 success=False,
                 original_text=request.text,
@@ -135,7 +212,7 @@ class PIIService:
             PIIAnonymizationResponse: Anonymization results
         """
         try:
-            logger.info("Starting PII anonymization", 
+            logger.info("Starting Gemini PII anonymization", 
                        text_length=len(request.text),
                        preserve_medical=request.preserve_medical_context)
             
@@ -163,43 +240,56 @@ class PIIService:
             # Use provided entities or clinical defaults
             entities_to_anonymize = request.entities if request.entities else clinical_entities
             
-            # First analyze to find entities
-            analyzer_results = self.analyzer.analyze(
-                text=request.text,
-                entities=entities_to_anonymize,
-                language="en",
-                score_threshold=request.score_threshold
+            # Create prompt
+            prompt = self._create_anonymization_prompt(
+                request.text, 
+                entities_to_anonymize,
+                request.preserve_medical_context
             )
+            
+            # Generate response from Gemini
+            response = self.model.generate_content(prompt)
+            response_text = response.text.strip()
+            
+            # Parse JSON response
+            try:
+                # Remove markdown code blocks if present
+                if response_text.startswith("```json"):
+                    response_text = response_text.replace("```json", "").replace("```", "").strip()
+                elif response_text.startswith("```"):
+                    response_text = response_text.replace("```", "").strip()
+                
+                result = json.loads(response_text)
+            except json.JSONDecodeError:
+                # Try to extract JSON object
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    result = json.loads(json_match.group(0))
+                else:
+                    result = {"anonymized_text": request.text, "entities": []}
+            
+            anonymized_text = result.get("anonymized_text", request.text)
+            entity_data = result.get("entities", [])
             
             # Convert to our entity format
             detected_entities = []
-            for result in analyzer_results:
-                entity = PIIEntity(
-                    entity_type=result.entity_type,
-                    start=result.start,
-                    end=result.end,
-                    score=result.score,
-                    text=request.text[result.start:result.end]
-                )
-                detected_entities.append(entity)
+            for ent in entity_data:
+                if ent.get("score", 0) >= request.score_threshold:
+                    entity = PIIEntity(
+                        entity_type=ent.get("entity_type", "UNKNOWN"),
+                        start=ent.get("start", 0),
+                        end=ent.get("end", 0),
+                        score=ent.get("score", 0.9),
+                        text=ent.get("text", "")
+                    )
+                    detected_entities.append(entity)
             
-            # Anonymize the text if entities were found
-            if analyzer_results:
-                anonymized_result = self.anonymizer.anonymize(
-                    text=request.text,
-                    analyzer_results=analyzer_results
-                )
-                anonymized_text = anonymized_result.text
-                has_pii = True
-                
-                logger.info("✅ PII anonymization completed", 
-                           original_length=len(request.text),
-                           anonymized_length=len(anonymized_text),
-                           entities_anonymized=len(detected_entities))
-            else:
-                anonymized_text = request.text
-                has_pii = False
-                logger.info("No PII entities found for anonymization")
+            has_pii = len(detected_entities) > 0
+            
+            logger.info("✅ Gemini PII anonymization completed", 
+                       original_length=len(request.text),
+                       anonymized_length=len(anonymized_text),
+                       entities_anonymized=len(detected_entities))
             
             return PIIAnonymizationResponse(
                 success=True,
@@ -212,7 +302,7 @@ class PIIService:
             )
             
         except Exception as e:
-            logger.error("❌ PII anonymization failed", error=str(e))
+            logger.error("❌ Gemini PII anonymization failed", error=str(e))
             return PIIAnonymizationResponse(
                 success=False,
                 original_text=request.text,

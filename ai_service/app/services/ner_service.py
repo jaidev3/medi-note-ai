@@ -1,13 +1,13 @@
 """
 NER (Named Entity Recognition) Service for AI Microservice
-Implements biomedical entity extraction using transformers pipeline
+Implements biomedical entity extraction using Google Gemini
 """
 import os
 import time
+import json
 from typing import Dict, Any, List
 import structlog
-from transformers import pipeline
-from langchain_core.runnables import RunnableLambda
+import google.generativeai as genai
 
 from ai_service.app.schemas.ner_schemas import NEROutput, Entity, NERRequest
 from ai_service.app.config.settings import settings
@@ -16,46 +16,74 @@ logger = structlog.get_logger(__name__)
 
 
 class NERService:
-    """Service for biomedical Named Entity Recognition."""
+    """Service for biomedical Named Entity Recognition using Gemini."""
     
     def __init__(self):
-        """Initialize NER service with model and pipeline."""
-        self.ner_pipe = None
-        self.ner_chain = None
+        """Initialize NER service with Gemini model."""
+        self.model = None
         self._initialize_model()
-        self._setup_chain()
     
     def _initialize_model(self):
-        """Initialize the biomedical NER model."""
+        """Initialize the Gemini model for NER."""
         try:
-            ner_model_name = settings.ner_model_name
-            logger.info("Initializing biomedical NER model", model=ner_model_name)
+            logger.info("Initializing Gemini for NER", model=settings.gemini_model)
             
-            # Correct task for this model ✅
-            self.ner_pipe = pipeline(
-                task="token-classification",
-                model=ner_model_name,
-                aggregation_strategy="simple"  # groups wordpieces into entities
+            # Configure Gemini API
+            genai.configure(api_key=settings.google_api_key)
+            
+            # Initialize Gemini model
+            self.model = genai.GenerativeModel(
+                model_name=settings.gemini_model,
+                generation_config={
+                    "temperature": 0.1,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": 2048,
+                }
             )
-            logger.info("✅ NER model initialized successfully")
+            
+            logger.info("✅ Gemini NER model initialized successfully")
             
         except Exception as e:
-            logger.error("❌ Failed to initialize NER model", error=str(e))
+            logger.error("❌ Failed to initialize Gemini NER model", error=str(e))
             raise RuntimeError(f"NER model initialization failed: {e}")
     
-    def _setup_chain(self):
-        """Setup LCEL chain with RunnableLambda around the HF pipeline."""
-        try:
-            if self.ner_pipe:
-                # Use RunnableLambda to wrap the HuggingFace pipeline for LCEL compatibility
-                self.ner_chain = RunnableLambda(lambda x: self.ner_pipe(x["text"]))
-                logger.info("✅ NER chain constructed successfully")
-        except Exception as e:
-            logger.error("❌ Failed to setup NER chain", error=str(e))
+    def _create_ner_prompt(self, text: str, filter_types: List[str] = None) -> str:
+        """Create prompt for Gemini to extract biomedical entities."""
+        entity_types = filter_types if filter_types else [
+            "disease", "symptom", "medication", "procedure", "test", 
+            "anatomy", "dosage", "frequency", "duration"
+        ]
+        
+        prompt = f"""Extract biomedical entities from the following clinical text. Return ONLY a JSON array of entities.
+
+Clinical Text: {text}
+
+Extract these entity types: {', '.join(entity_types)}
+
+Return format (JSON only, no other text):
+[
+  {{
+    "type": "entity_type",
+    "value": "entity_text",
+    "confidence": 0.95,
+    "start_pos": 0,
+    "end_pos": 10
+  }}
+]
+
+Rules:
+- Use lowercase for entity types
+- Include exact positions in the original text
+- Confidence between 0.0 and 1.0
+- Only include relevant medical entities
+- Return empty array [] if no entities found
+"""
+        return prompt
     
     async def extract_entities(self, request: NERRequest) -> NEROutput:
         """
-        Extract biomedical entities from clinical text.
+        Extract biomedical entities from clinical text using Gemini.
         
         Args:
             request: NER request containing text and parameters
@@ -66,37 +94,51 @@ class NERService:
         start_time = time.time()
         
         try:
-            logger.info("Starting NER entity extraction", text_length=len(request.text))
+            logger.info("Starting Gemini NER entity extraction", text_length=len(request.text))
             
-            if not self.ner_pipe:
-                raise RuntimeError("NER pipeline not initialized")
+            if not self.model:
+                raise RuntimeError("NER model not initialized")
             
-            # Use the HuggingFace pipeline directly for token classification
-            raw_entities = self.ner_pipe(request.text)  # list[dict]: {entity_group, word, score, start, end}
+            # Create prompt for entity extraction
+            prompt = self._create_ner_prompt(request.text, request.filter_types)
+            
+            # Generate response from Gemini
+            response = self.model.generate_content(prompt)
+            
+            # Extract JSON from response
+            response_text = response.text.strip()
+            
+            # Try to extract JSON from the response
+            try:
+                # Remove markdown code blocks if present
+                if response_text.startswith("```json"):
+                    response_text = response_text.replace("```json", "").replace("```", "").strip()
+                elif response_text.startswith("```"):
+                    response_text = response_text.replace("```", "").strip()
+                
+                raw_entities = json.loads(response_text)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse JSON response, attempting extraction")
+                # Try to find JSON array in the response
+                import re
+                json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+                if json_match:
+                    raw_entities = json.loads(json_match.group(0))
+                else:
+                    raw_entities = []
             
             # Process and validate entities
             entities = []
             for raw_entity in raw_entities:
                 try:
-                    # Extract entity information from the pipeline output
-                    ent_type = (raw_entity.get("entity_group") or raw_entity.get("entity") or "unknown").lower()
-                    ent_value = raw_entity.get("word") or raw_entity.get("entity") or ""
-                    ent_confidence = float(raw_entity.get("score", 1.0))
-                    ent_start = raw_entity.get("start", 0)
-                    ent_end = raw_entity.get("end", 0)
-                    
-                    # Create Entity object
                     entity = Entity(
-                        type=ent_type,
-                        value=ent_value,
-                        confidence=ent_confidence,
-                        start_pos=ent_start,
-                        end_pos=ent_end
+                        type=raw_entity.get("type", "unknown").lower(),
+                        value=raw_entity.get("value", ""),
+                        confidence=float(raw_entity.get("confidence", 0.9)),
+                        start_pos=raw_entity.get("start_pos", 0),
+                        end_pos=raw_entity.get("end_pos", 0)
                     )
-                    
-                    # Filter by type if specified
-                    if not request.filter_types or ent_type in request.filter_types:
-                        entities.append(entity)
+                    entities.append(entity)
                         
                 except Exception as e:
                     logger.warning("Invalid entity format", entity=raw_entity, error=str(e))
@@ -110,7 +152,7 @@ class NERService:
             )
             
             logger.info(
-                "✅ NER extraction completed",
+                "✅ Gemini NER extraction completed",
                 entity_count=len(entities),
                 processing_time=processing_time
             )
@@ -120,7 +162,7 @@ class NERService:
         except Exception as e:
             processing_time = time.time() - start_time
             logger.error(
-                "❌ NER extraction failed",
+                "❌ Gemini NER extraction failed",
                 error=str(e),
                 processing_time=processing_time
             )

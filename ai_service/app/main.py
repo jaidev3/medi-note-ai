@@ -158,7 +158,7 @@ async def model_status():
         "soap_model": {"loaded": False, "model": settings.huggingface_model_id},
         "rag_model": {"loaded": False, "model": settings.openai_embedding_model},
         "ner_model": {"loaded": False, "model": settings.ner_model_name},
-        "pii_model": {"loaded": False, "model": "presidio"},
+        "pii_model": {"loaded": False, "model": "gemini"},
         "cache_directory": settings.transformers_cache
     }
 

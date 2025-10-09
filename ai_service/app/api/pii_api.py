@@ -137,18 +137,16 @@ async def quick_anonymize_text(text: str, preserve_medical: bool = True):
 async def pii_health_check():
     """Health check for PII service."""
     try:
-        # Check if PII components are initialized
-        analyzer_ready = pii_service.analyzer is not None
-        anonymizer_ready = pii_service.anonymizer is not None
-        
+        # For the current implementation we use Google Gemini.
+        # Report basic readiness based on the initialized Gemini model in pii_service.
+        model_ready = getattr(pii_service, "model", None) is not None
+
         return {
-            "status": "healthy" if (analyzer_ready and anonymizer_ready) else "unhealthy",
+            "status": "healthy" if model_ready else "unhealthy",
             "components": {
-                "analyzer": analyzer_ready,
-                "anonymizer": anonymizer_ready
+                "gemini_model": model_ready
             },
-            "framework": "Microsoft Presidio",
-            "nlp_engine": "spaCy (en_core_web_sm)",
+            "framework": "Google Gemini",
             "supported_entities": [
                 "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "CREDIT_CARD",
                 "IBAN_CODE", "IP_ADDRESS", "LOCATION", "NRP", "MEDICAL_LICENSE",

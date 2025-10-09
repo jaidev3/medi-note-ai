@@ -30,23 +30,34 @@ class AIServiceSettings(BaseSettings):
         description="Database connection URL"
     )
     
-    # OpenAI Configuration
-    openai_api_key: str = Field(description="OpenAI API key")
+    # Google Gemini Configuration (Primary)
+    google_api_key: str = Field(description="Google Gemini API key")
+    gemini_model: str = Field(
+        default="gemini-1.5-flash", 
+        description="Gemini model for generation (flash, pro, or pro-vision)"
+    )
+    gemini_embedding_model: str = Field(
+        default="models/text-embedding-004",
+        description="Gemini embedding model"
+    )
+    temperature: float = Field(default=0.1, description="LLM temperature")
+    
+    # Legacy OpenAI Configuration (Optional fallback)
+    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key (optional)")
     openai_model: str = Field(default="gpt-4o-mini", description="OpenAI model for generation")
     openai_embedding_model: str = Field(
         default="text-embedding-3-small", 
         description="OpenAI embedding model"
     )
-    temperature: float = Field(default=0.1, description="LLM temperature")
     
-    # HuggingFace Configuration
-    huggingface_api_token: str = Field(description="HuggingFace API token")
+    # Legacy HuggingFace Configuration (Optional fallback)
+    huggingface_api_token: Optional[str] = Field(default=None, description="HuggingFace API token (optional)")
     huggingface_model_id: str = Field(
         default="aaditya/Llama3-OpenBioLLM-70B",
         description="HuggingFace model ID for SOAP generation"
     )
     
-    # NER Configuration
+    # Legacy NER Configuration (Optional fallback)
     ner_model_name: str = Field(
         default="d4data/biomedical-ner-all",
         description="NER model name"

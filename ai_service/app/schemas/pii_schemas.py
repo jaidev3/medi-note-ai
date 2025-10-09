@@ -7,7 +7,7 @@ from enum import Enum
 
 
 class AnonymizationMethod(str, Enum):
-    """Anonymization methods supported by Presidio."""
+    """Anonymization methods for PII handling."""
     REPLACE = "replace"
     REDACT = "redact"
     HASH = "hash"

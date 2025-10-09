@@ -24,19 +24,21 @@ dependencies = [
     
     # AI & Language Processing
     "langchain-core>=0.1.0",
+    "langchain-google-genai>=1.0.0",
+    "google-generativeai>=0.8.0",
+    
+    # Legacy AI libraries (optional fallback)
     "langchain-openai>=0.0.5",
     "openai>=1.6.0",
-    
-    # HuggingFace for AI models
     "huggingface_hub",
     "transformers>=4.35.0,<4.45.0",
     "torch>=2.1.0,<3.0.0",
     "numpy>=1.24.0,<2.0.0",
     
-    # PII Detection & Anonymization
-    "presidio-analyzer>=2.2.359,<2.3.0",
-    "presidio-anonymizer>=2.2.357,<2.3.0",
-    "spacy>=3.7.0,<3.9.0",
+    # NOTE: Presidio/spaCy were previously optional fallbacks for PII detection.
+    # Removed here in favor of the primary Google Gemini implementation used
+    # by this service. If you reintroduce a local PII fallback, add the
+    # dependencies back and update the PII service accordingly.
     
     # HTTP Client & Async Operations
     "httpx>=0.25.2",
