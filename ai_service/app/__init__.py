@@ -1,3 +1,0 @@
-"""
-AI Service Application Package
-"""

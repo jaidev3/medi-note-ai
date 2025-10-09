@@ -175,7 +175,7 @@ app.include_router(embeddings_api.router, prefix="/embeddings", tags=["Embedding
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "ai_service.app.main:app",
+        "main:app",
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
