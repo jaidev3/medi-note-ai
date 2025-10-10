@@ -86,7 +86,7 @@ secret_key.txt
 # =============================================================================
 
 # Model files and caches
-models/
+# models/
 *.model
 *.pkl
 *.pickle
