@@ -39,10 +39,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("🚀 Starting Echo Notes AI Service...")
     
-    # Set environment variables for model caching
-    os.environ["TRANSFORMERS_CACHE"] = settings.transformers_cache
-    os.environ["HF_HOME"] = settings.hf_home
-    os.environ["TORCH_HOME"] = settings.torch_home
+    # Note: legacy model cache environment variables removed from settings.
+    # If you need to set cache dirs, provide them via the environment or
+    # implement new configuration fields in `config/settings.py`.
     
     # TODO: Initialize AI models and services
     # TODO: Pre-load models for faster inference
@@ -153,14 +152,26 @@ async def root():
 # Model status endpoint
 @app.get("/models/status", tags=["Models"])
 async def model_status():
-    """Get status of loaded AI models."""
-    return {
-        "soap_model": {"loaded": False, "model": settings.huggingface_model_id},
-        "rag_model": {"loaded": False, "model": settings.openai_embedding_model},
-        "ner_model": {"loaded": False, "model": settings.ner_model_name},
-        "pii_model": {"loaded": False, "model": "gemini"},
-        "cache_directory": settings.transformers_cache
+    """Get status of loaded AI models (reflects primary/active models only)."""
+    # Only report primary models configured in settings. Use getattr for safety
+    # in case a field is not present.
+    soap_model = getattr(settings, "huggingface_model_id", None)
+    rag_model = getattr(settings, "openai_embedding_model", None)
+    ner_model = getattr(settings, "ner_model_name", None)
+
+    status = {
+        "soap_model": {"loaded": False, "model": soap_model},
+        "rag_model": {"loaded": False, "model": rag_model},
+        "ner_model": {"loaded": False, "model": ner_model},
+        "pii_model": {"loaded": False, "model": getattr(settings, "gemini_model", "gemini")}
     }
+
+    # Include cache_directory only if available
+    cache_dir = getattr(settings, "transformers_cache", None)
+    if cache_dir:
+        status["cache_directory"] = cache_dir
+
+    return status
 
 
 # Include API routers

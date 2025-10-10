@@ -53,23 +53,11 @@ AI_SERVICE_PORT=8002
 AI_SERVICE_DEBUG=false
 AI_SERVICE_BACKEND_SERVICE_URL=http://backend:8000
 
-# OpenAI Configuration
-AI_SERVICE_OPENAI_API_KEY=your_openai_key
-AI_SERVICE_OPENAI_MODEL=gpt-4o-mini
-AI_SERVICE_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-AI_SERVICE_TEMPERATURE=0.1
-
-# HuggingFace Configuration
-AI_SERVICE_HUGGINGFACE_API_TOKEN=your_hf_token
-AI_SERVICE_HUGGINGFACE_MODEL_ID=aaditya/Llama3-OpenBioLLM-70B
-
-# NER Configuration
-AI_SERVICE_NER_MODEL_NAME=d4data/biomedical-ner-all
-
-# Model Caching
-AI_SERVICE_TRANSFORMERS_CACHE=/app/.cache/huggingface
-AI_SERVICE_HF_HOME=/app/.cache/huggingface
-AI_SERVICE_TORCH_HOME=/app/.cache/torch
+# Model provider configuration (examples)
+# Configure your preferred model provider/API keys and models as needed.
+# For example, set the provider-specific environment variables or update
+# `ai_service/config/settings.py` to add explicit fields for your chosen
+# providers (Gemini, OpenAI, HuggingFace, etc.).
 
 # Performance
 AI_SERVICE_MAX_CONCURRENT_REQUESTS=10
@@ -101,10 +89,9 @@ AI_SERVICE_LOG_LEVEL=INFO
 
 3. **Set Environment Variables**:
 
-   ```bash
-   export AI_SERVICE_OPENAI_API_KEY=your_key
-   export AI_SERVICE_HUGGINGFACE_API_TOKEN=your_token
-   ```
+Configure provider-specific variables for your chosen model provider. For
+example, export the Gemini API key or other provider credentials required for
+your deployment.
 
 4. **Run Service**:
 
@@ -127,9 +114,8 @@ AI_SERVICE_LOG_LEVEL=INFO
 2. **Run Container**:
    ```bash
    docker run -p 8002:8002 \
-     -e AI_SERVICE_OPENAI_API_KEY=your_key \
-     -e AI_SERVICE_HUGGINGFACE_API_TOKEN=your_token \
-     echo-notes-ai-service
+      -e <PROVIDER_API_KEY>=your_key \
+      echo-notes-ai-service
    ```
 
 ## Docker Compose Deployment
