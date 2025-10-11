@@ -37,4 +37,3 @@ class NERResponse(BaseModel):
     success: bool = Field(..., description="Whether NER processing was successful")
     data: NEROutput = Field(..., description="NER extraction results")
     message: str = Field(default="", description="Status or error message")
-    request_id: str = Field(default="", description="Unique request identifier")

@@ -41,8 +41,7 @@ async def extract_entities(request: NERRequest):
         response = NERResponse(
             success=True,
             data=ner_output,
-            message=f"Extracted {ner_output.total_entities} entities successfully",
-            request_id=""  # Could add request tracking if needed
+            message=f"Extracted {ner_output.total_entities} entities successfully"
         )
         
         logger.info("✅ NER extraction completed", 
@@ -99,14 +98,14 @@ async def extract_context_data(request: NERRequest):
 async def ner_health_check():
     """Health check for NER service."""
     try:
-        # Check if NER pipeline is initialized
-        model_ready = ner_service.ner_pipe is not None
+        # Check if Gemini NER model is initialized
+        model_ready = ner_service.model is not None
         
         return {
             "status": "healthy" if model_ready else "unhealthy",
             "model_loaded": model_ready,
-            "model_name": "d4data/biomedical-ner-all",
-            "task": "token-classification",
+            "model_name": "Google Gemini",
+            "framework": "Google Gemini",
             "supported_entities": [
                 "diseases", "symptoms", "medications", "procedures",
                 "anatomy", "dosages", "frequencies", "medical_devices"

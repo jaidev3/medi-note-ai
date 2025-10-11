@@ -137,9 +137,8 @@ async def quick_anonymize_text(text: str, preserve_medical: bool = True):
 async def pii_health_check():
     """Health check for PII service."""
     try:
-        # For the current implementation we use Google Gemini.
-        # Report basic readiness based on the initialized Gemini model in pii_service.
-        model_ready = getattr(pii_service, "model", None) is not None
+        # Check if Gemini model is initialized
+        model_ready = pii_service.model is not None
 
         return {
             "status": "healthy" if model_ready else "unhealthy",

@@ -16,8 +16,7 @@ import google.generativeai as genai
 load_dotenv()
 
 from schemas.rag_schemas import (
-    EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse,
-    SOAPEmbeddingRequest, SOAPEmbeddingResponse
+    EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse
 )
 from config.settings import settings
 

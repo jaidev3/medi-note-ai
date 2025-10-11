@@ -53,18 +53,3 @@ class BatchEmbeddingResponse(BaseModel):
     failed_count: int = Field(default=0, description="Number of texts that failed processing")
     processing_time: float = Field(default=0.0, description="Total processing time in seconds")
     message: str = Field(default="", description="Status or error message")
-
-
-class SOAPEmbeddingRequest(BaseModel):
-    """Request schema for SOAP note embedding."""
-    note_id: uuid.UUID = Field(..., description="SOAP note ID to embed")
-    force_reembed: bool = Field(default=False, description="Force re-embedding even if exists")
-
-
-class SOAPEmbeddingResponse(BaseModel):
-    """Response schema for SOAP note embedding."""
-    success: bool = Field(..., description="Whether SOAP note embedding was successful")
-    note_id: uuid.UUID = Field(..., description="SOAP note ID that was processed")
-    embedding_generated: bool = Field(default=False, description="Whether new embedding was generated")
-    processing_time: float = Field(default=0.0, description="Processing time in seconds")
-    message: str = Field(default="", description="Status or error message")

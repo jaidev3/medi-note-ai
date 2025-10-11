@@ -114,8 +114,8 @@ async def soap_health_check():
     try:
         # Check if services are initialized
         soap_ready = soap_service.soap_model is not None and soap_service.judge_model is not None
-        ner_ready = ner_service.ner_pipe is not None
-        pii_ready = pii_service.analyzer is not None
+        ner_ready = ner_service.model is not None
+        pii_ready = pii_service.model is not None
         
         return {
             "status": "healthy" if all([soap_ready, ner_ready, pii_ready]) else "degraded",
@@ -125,9 +125,9 @@ async def soap_health_check():
                 "pii_detection": pii_ready
             },
             "models": {
-                "soap_model": "HuggingFace + OpenAI Judge",
-                "ner_model": "d4data/biomedical-ner-all",
-                "pii_model": "Microsoft Presidio"
+                "soap_model": "Google Gemini + Judge",
+                "ner_model": "Google Gemini",
+                "pii_model": "Google Gemini"
             }
         }
     except Exception as e:

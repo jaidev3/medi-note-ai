@@ -7,8 +7,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse,
-    BatchEmbeddingRequest, BatchEmbeddingResponse,
-    SOAPEmbeddingRequest, SOAPEmbeddingResponse
+    BatchEmbeddingRequest, BatchEmbeddingResponse
 )
 from services.rag_service import RAGService
 
@@ -89,7 +88,7 @@ async def generate_batch_embeddings(request: BatchEmbeddingRequest):
         )
 
 
-@router.post("/soap-content", summary="Generate SOAP Content Embedding")
+@router.post("/soap-content", response_model=EmbeddingResponse, summary="Generate SOAP Content Embedding")
 async def generate_soap_content_embedding(content: dict):
     """
     Generate embedding for SOAP note content.
@@ -101,7 +100,7 @@ async def generate_soap_content_embedding(content: dict):
         content: SOAP note content dictionary
         
     Returns:
-        Dict with embedding vector and metadata
+        EmbeddingResponse: Generated embedding with metadata
     """
     try:
         logger.info("SOAP content embedding requested")
@@ -111,20 +110,22 @@ async def generate_soap_content_embedding(content: dict):
         
         if embedding:
             logger.info("✅ SOAP content embedding completed", dimension=len(embedding))
-            return {
-                "success": True,
-                "embedding": embedding,
-                "dimension": len(embedding),
-                "message": "SOAP content embedding generated successfully"
-            }
+            return EmbeddingResponse(
+                success=True,
+                embedding=embedding,
+                dimension=len(embedding),
+                processing_time=0.0,
+                message="SOAP content embedding generated successfully"
+            )
         else:
             logger.error("Failed to generate SOAP content embedding")
-            return {
-                "success": False,
-                "embedding": None,
-                "dimension": 0,
-                "message": "Failed to generate SOAP content embedding"
-            }
+            return EmbeddingResponse(
+                success=False,
+                embedding=None,
+                dimension=0,
+                processing_time=0.0,
+                message="Failed to generate SOAP content embedding"
+            )
         
     except Exception as e:
         logger.error("❌ SOAP content embedding failed", error=str(e))
@@ -139,14 +140,14 @@ async def embeddings_health_check():
     """Health check for embeddings service."""
     try:
         # Check if embedding model is initialized
-        model_ready = rag_service.embeddings is not None
+        model_ready = rag_service.embedding_model is not None
         
         return {
             "status": "healthy" if model_ready else "unhealthy",
             "model_loaded": model_ready,
-            "model_name": "OpenAI text-embedding-3-small",
-            "provider": "OpenAI",
-            "dimension": 1536,  # Default dimension for text-embedding-3-small
+            "model_name": "Google Gemini",
+            "provider": "Google Gemini",
+            "dimension": 1536,  # Default dimension for Google Gemini
             "capabilities": [
                 "single_text_embedding",
                 "batch_embedding",
