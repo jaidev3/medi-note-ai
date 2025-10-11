@@ -10,7 +10,6 @@ import structlog
 import google.generativeai as genai
 
 from schemas.ner_schemas import NEROutput, Entity, NERRequest
-from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -26,14 +25,17 @@ class NERService:
     def _initialize_model(self):
         """Initialize the Gemini model for NER."""
         try:
-            logger.info("Initializing Gemini for NER", model=settings.gemini_model)
+            gemini_model = os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")
+            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
+            
+            logger.info("Initializing Gemini for NER", model=gemini_model)
             
             # Configure Gemini API
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=google_api_key)
             
             # Initialize Gemini model
             self.model = genai.GenerativeModel(
-                model_name=settings.gemini_model,
+                model_name=gemini_model,
                 generation_config={
                     "temperature": 0.1,
                     "top_p": 0.95,

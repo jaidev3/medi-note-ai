@@ -13,8 +13,6 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-from config.settings import settings
-
 # Configure structured logging
 structlog.configure(
     processors=[
@@ -65,7 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Echo Notes AI Service",
     description="AI Microservice for ML/LLM operations including SOAP generation, RAG, NER, and PII detection",
-    version=settings.service_version,
+    version=os.getenv("AI_SERVICE_VERSION", "0.0.0"),
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -123,9 +121,9 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "echo-notes-ai-service",
-        "version": settings.service_version,
+        "version": os.getenv("AI_SERVICE_VERSION", "0.0.0"),
         "models_loaded": False,  # TODO: Update based on actual model status
-        "backend_connection": settings.backend_service_url
+        "backend_connection": os.getenv("AI_SERVICE_BACKEND_SERVICE_URL")
     }
 
 
@@ -136,7 +134,7 @@ async def root():
     return {
         "message": "Echo Notes AI Service",
         "description": "AI Microservice for ML/LLM operations",
-        "version": settings.service_version,
+        "version": os.getenv("AI_SERVICE_VERSION", "0.0.0"),
         "docs_url": "/docs",
         "health_check": "/health",
         "capabilities": [
@@ -153,23 +151,12 @@ async def root():
 @app.get("/models/status", tags=["Models"])
 async def model_status():
     """Get status of loaded AI models (reflects primary/active models only)."""
-    # Only report primary models configured in settings. Use getattr for safety
-    # in case a field is not present.
-    soap_model = getattr(settings, "huggingface_model_id", None)
-    rag_model = getattr(settings, "openai_embedding_model", None)
-    ner_model = getattr(settings, "ner_model_name", None)
-
     status = {
-        "soap_model": {"loaded": False, "model": soap_model},
-        "rag_model": {"loaded": False, "model": rag_model},
-        "ner_model": {"loaded": False, "model": ner_model},
-        "pii_model": {"loaded": False, "model": getattr(settings, "gemini_model", "gemini")}
+        "soap_model": {"loaded": False, "model": os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")},
+        "rag_model": {"loaded": False, "model": os.getenv("AI_SERVICE_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")},
+        "ner_model": {"loaded": False, "model": os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")},
+        "pii_model": {"loaded": False, "model": os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")}
     }
-
-    # Include cache_directory only if available
-    cache_dir = getattr(settings, "transformers_cache", None)
-    if cache_dir:
-        status["cache_directory"] = cache_dir
 
     return status
 
@@ -187,9 +174,9 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug,
-        log_level=settings.log_level.lower(),
+        host=os.getenv("AI_SERVICE_HOST", "0.0.0.0"),
+        port=int(os.getenv("AI_SERVICE_PORT", "8002")),
+        reload=os.getenv("AI_SERVICE_DEBUG", "false").lower() == "true",
+        log_level=os.getenv("AI_SERVICE_LOG_LEVEL", "INFO").lower(),
         loop="asyncio"
     )

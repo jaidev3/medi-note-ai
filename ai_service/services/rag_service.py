@@ -18,7 +18,6 @@ load_dotenv()
 from schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse
 )
-from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -34,13 +33,16 @@ class RAGService:
     def _initialize_models(self):
         """Initialize Gemini embedding model."""
         try:
+            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
+            gemini_embedding_model = os.getenv("AI_SERVICE_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+            
             logger.info("Initializing Gemini embedding model")
             
             # Configure Gemini API
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=google_api_key)
             
             # Store the embedding model name
-            self.embedding_model = settings.gemini_embedding_model
+            self.embedding_model = gemini_embedding_model
             
             logger.info("✅ Gemini embedding model initialized successfully", model=self.embedding_model)
             
@@ -122,6 +124,8 @@ class RAGService:
         embeddings = []
         processed_count = 0
         failed_count = 0
+        
+        batch_size = int(os.getenv("AI_SERVICE_EMBEDDING_BATCH_SIZE", "50"))
         
         try:
             logger.info("Generating Gemini batch embeddings", text_count=len(request.texts))

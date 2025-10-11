@@ -3,6 +3,7 @@ PII (Personally Identifiable Information) Detection and Anonymization Service fo
 Uses Google Gemini for PII detection and anonymization
 """
 
+import os
 import structlog
 import json
 import re
@@ -13,7 +14,6 @@ from schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse, PIIEntity,
     PIIAnonymizationRequest, PIIAnonymizationResponse
 )
-from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -24,14 +24,17 @@ class PIIService:
     def __init__(self):
         """Initialize the PII service with Gemini."""
         try:
+            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
+            gemini_model = os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")
+            
             logger.info("🔍 Initializing PII service with Gemini")
             
             # Configure Gemini API
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=google_api_key)
             
             # Initialize Gemini model
             self.model = genai.GenerativeModel(
-                model_name=settings.gemini_model,
+                model_name=gemini_model,
                 generation_config={
                     "temperature": 0.1,
                     "top_p": 0.95,
@@ -49,7 +52,7 @@ class PIIService:
             ]
             
             # Set default score threshold
-            self.default_score_threshold = 0.5
+            self.default_score_threshold = float(os.getenv("AI_SERVICE_PII_CONFIDENCE_THRESHOLD", "0.5"))
             
             logger.info("✅ PII service initialized successfully with Gemini")
             

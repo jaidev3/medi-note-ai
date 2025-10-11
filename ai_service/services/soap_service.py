@@ -17,7 +17,6 @@ from schemas.soap_schemas import (
     SOAPGenerationResponse, JudgeLLMResponse
 )
 from schemas.ner_schemas import NEROutput
-from config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -34,16 +33,20 @@ class SOAPGenerationService:
     def _initialize_models(self):
         """Initialize Gemini models for SOAP generation and validation."""
         try:
+            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
+            gemini_model = os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")
+            temperature = float(os.getenv("AI_SERVICE_TEMPERATURE", "0.1"))
+            
             logger.info("Initializing Gemini models for SOAP generation and Judge validation")
             
             # Configure Gemini API
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=google_api_key)
             
             # Initialize Gemini model for SOAP generation
             self.soap_model = genai.GenerativeModel(
-                model_name=settings.gemini_model,
+                model_name=gemini_model,
                 generation_config={
-                    "temperature": settings.temperature,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 2048,
@@ -52,7 +55,7 @@ class SOAPGenerationService:
             
             # Initialize Gemini model for Judge validation
             self.judge_model = genai.GenerativeModel(
-                model_name=settings.gemini_model,
+                model_name=gemini_model,
                 generation_config={
                     "temperature": 0.1,
                     "top_p": 0.95,
@@ -295,7 +298,7 @@ Return ONLY the JSON assessment, no additional text."""
         """
         start_time = time.time()
         regeneration_count = 0
-        max_regenerations = 3
+        max_regenerations = int(os.getenv("AI_SERVICE_SOAP_MAX_RETRIES", "3"))
         
         try:
             logger.info(
