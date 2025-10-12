@@ -6,7 +6,10 @@ import os
 import time
 from typing import Dict, Any, List
 import structlog
-from transformers import pipeline
+import json
+import re
+from typing import Optional
+
 from langchain_core.runnables import RunnableLambda
 
 from app.schemas.ner_schemas import NEROutput, Entity, NERRequest
@@ -21,22 +24,16 @@ class NERService:
         """Initialize NER service with model and pipeline."""
         self.ner_pipe = None
         self.ner_chain = None
+        # backend: 'openai' or 'gemini'
+        self.backend = os.getenv("NER_BACKEND", "openai").lower()
         self._initialize_model()
         self._setup_chain()
     
     def _initialize_model(self):
         """Initialize the biomedical NER model."""
         try:
-            ner_model_name = os.getenv("NER_MODEL_NAME", "d4data/biomedical-ner-all")
-            logger.info("Initializing biomedical NER model", model=ner_model_name)
-            
-            # Correct task for this model ✅
-            self.ner_pipe = pipeline(
-                task="token-classification",
-                model=ner_model_name,
-                aggregation_strategy="simple"  # groups wordpieces into entities
-            )
-            logger.info("✅ NER model initialized successfully")
+            # No local model initialization required for LLM backends.
+            logger.info("NER service using LLM backend", backend=self.backend)
             
         except Exception as e:
             logger.error("❌ Failed to initialize NER model", error=str(e))
@@ -45,10 +42,14 @@ class NERService:
     def _setup_chain(self):
         """Setup LCEL chain with RunnableLambda around the HF pipeline."""
         try:
-            if self.ner_pipe:
-                # Use RunnableLambda to wrap the HuggingFace pipeline for LCEL compatibility
-                self.ner_chain = RunnableLambda(lambda x: self.ner_pipe(x["text"]))
-                logger.info("✅ NER chain constructed successfully")
+            # Create a RunnableLambda wrapper depending on backend (LLM only)
+            if self.backend == "openai":
+                self.ner_chain = RunnableLambda(lambda x: self._extract_entities_via_openai(x["text"]))
+            elif self.backend == "gemini":
+                self.ner_chain = RunnableLambda(lambda x: self._extract_entities_via_gemini(x["text"]))
+            else:
+                raise RuntimeError(f"Unsupported NER backend: {self.backend}")
+            logger.info("✅ NER chain constructed successfully", backend=self.backend)
         except Exception as e:
             logger.error("❌ Failed to setup NER chain", error=str(e))
     
@@ -65,22 +66,26 @@ class NERService:
         start_time = time.time()
         
         try:
-            logger.info("Starting NER entity extraction", text_length=len(request.text))
+            logger.info("Starting NER entity extraction", text_length=len(request.text), backend=self.backend)
             print("jaidev","NER step 3")
-            if not self.ner_pipe:
-                raise RuntimeError("NER pipeline not initialized")
-            
-            # Use the HuggingFace pipeline directly for token classification
-            raw_entities = self.ner_pipe(request.text)  # list[dict]: {entity_group, word, score, start, end}
+
+            # Dispatch to LLM backend
+            if self.backend == "openai":
+                raw_entities = self._extract_entities_via_openai(request.text)
+            elif self.backend == "gemini":
+                raw_entities = self._extract_entities_via_gemini(request.text)
+            else:
+                raise RuntimeError(f"Unsupported NER backend: {self.backend}")
             
             # Process and validate entities
             entities = []
             for raw_entity in raw_entities:
                 try:
                     # Extract entity information from the pipeline output
-                    ent_type = (raw_entity.get("entity_group") or raw_entity.get("entity") or "unknown").lower()
-                    ent_value = raw_entity.get("word") or raw_entity.get("entity") or ""
-                    ent_confidence = float(raw_entity.get("score", 1.0))
+                    # LLM backends are expected to return dicts with keys: type, value, start, end, confidence
+                    ent_type = (raw_entity.get("entity_group") or raw_entity.get("entity") or raw_entity.get("type") or "unknown").lower()
+                    ent_value = raw_entity.get("word") or raw_entity.get("entity") or raw_entity.get("value") or ""
+                    ent_confidence = float(raw_entity.get("score", raw_entity.get("confidence", 1.0)))
                     
                     # Create Entity object
                     entity = Entity(
@@ -145,3 +150,130 @@ class NERService:
             "total_entities": ner_output.total_entities,
             "processing_time": ner_output.processing_time
         }
+
+    # -------------------------------
+    # LLM backends (OpenAI / Gemini)
+    # -------------------------------
+    def _safe_parse_json(self, text: str) -> Optional[dict]:
+        """Try to robustly parse JSON from model output."""
+        try:
+            return json.loads(text)
+        except Exception:
+            # Try to extract the first {...} block
+            m = re.search(r"\{.*\}", text, re.DOTALL)
+            if m:
+                try:
+                    return json.loads(m.group(0))
+                except Exception:
+                    return None
+            return None
+
+    def _normalize_and_validate_entities(self, text: str, entities_raw: list) -> list:
+        """Normalize LLM output entities into a uniform dict shape and validate indices.
+
+        Expected final dict keys: type, value, start, end, confidence
+        """
+        normalized = []
+        for ent in entities_raw:
+            try:
+                etype = ent.get("type") or ent.get("entity") or ent.get("entity_group") or "unknown"
+                value = ent.get("value") or ent.get("word") or ent.get("entity") or ""
+                start = ent.get("start")
+                end = ent.get("end")
+                conf = ent.get("confidence") or ent.get("score") or 1.0
+
+                # If model didn't provide start/end, try to find the substring in the text
+                if start is None or end is None:
+                    idx = text.find(value)
+                    if idx >= 0:
+                        start = idx
+                        end = idx + len(value)
+                    else:
+                        # skip entities that cannot be located
+                        continue
+
+                # validate substring
+                if text[start:end] != value:
+                    # try to locate value again (maybe whitespace/punctuation differences)
+                    idx = text.find(value)
+                    if idx >= 0:
+                        start = idx
+                        end = idx + len(value)
+                    else:
+                        # fallback: set value from text slice
+                        value = text[start:end]
+
+                normalized.append({
+                    "type": etype.lower(),
+                    "value": value,
+                    "start": int(start),
+                    "end": int(end),
+                    "confidence": float(conf)
+                })
+            except Exception:
+                continue
+        return normalized
+
+    def _extract_entities_via_openai(self, text: str) -> list:
+        """Call OpenAI-style LLM to extract entities. Placeholder implementation.
+
+        This function expects OPENAI_API_KEY in env and an installed OpenAI client.
+        It returns a list of dicts with keys similar to HF pipeline output.
+        """
+        # Build prompt with instructions and a minimal example
+        system = (
+            "You are a biomedical entity extractor. Return JSON only with a top-level `entities` list. "
+            "Each entity must contain: type, value, start, end, confidence. "
+            "Use exact substring values and 0-based character indices."
+        )
+        user_prompt = f"Text: '''{text}'''\n\nReturn JSON with field `entities`."
+
+        # Placeholder: use environment's OpenAI client if available
+        try:
+            import openai
+            openai.api_key = os.getenv("OPENAI_API_KEY")
+            resp = openai.ChatCompletion.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.0,
+            )
+            content = resp["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error("OpenAI LLM call failed", error=str(e))
+            return []
+
+        parsed = self._safe_parse_json(content)
+        if not parsed or "entities" not in parsed:
+            return []
+        normalized = self._normalize_and_validate_entities(text, parsed["entities"])
+        return normalized
+
+    def _extract_entities_via_gemini(self, text: str) -> list:
+        """Call Google Gemini / Vertex AI to extract entities. Placeholder implementation.
+
+        You must configure Google credentials and the vendor client.
+        """
+        try:
+            # Example placeholder using google ai client -- adjust to your installed SDK
+            from google import generativeai
+            generativeai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            system = (
+                "You are a biomedical entity extractor. Return JSON only with a top-level `entities` list. "
+                "Each entity must contain: type, value, start, end, confidence. "
+                "Use exact substring values and 0-based character indices."
+            )
+            prompt = f"Text: '''{text}'''\n\nReturn JSON with field `entities`."
+            resp = generativeai.chat.create(model=os.getenv("GEMINI_MODEL", "gemini-mini"), messages=[{"role":"system","content":system},{"role":"user","content":prompt}], temperature=0.0)
+            content = resp.last or resp["candidates"][0]["content"]
+        except Exception as e:
+            logger.error("Gemini LLM call failed", error=str(e))
+            return []
+
+        parsed = self._safe_parse_json(content)
+        if not parsed or "entities" not in parsed:
+            return []
+        normalized = self._normalize_and_validate_entities(text, parsed["entities"])
+        return normalized
