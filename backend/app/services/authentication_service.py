@@ -11,7 +11,6 @@ import structlog
 import bcrypt
 import jwt
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.professional import Professional
 from app.schemas.auth_schemas import (
