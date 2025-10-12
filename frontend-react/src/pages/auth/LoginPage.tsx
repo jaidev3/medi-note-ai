@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useForm, Controller } from "react-hook-form";
 import {
   Container,
   Box,
@@ -17,39 +18,32 @@ import {
   VisibilityOff,
   Login as LoginIcon,
 } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
+import { useLogin } from "@/hooks/useAuthApi";
+import { LoginRequest } from "@/lib";
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const navigate = useNavigate();
+  const { mutate: login, isPending, isError, error } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError("");
-  };
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginRequest>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      await login(formData);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Login failed. Please check your credentials."
-      );
-    } finally {
-      setLoading(false);
-    }
+  const onSubmit = async (data: LoginRequest) => {
+    login(data, {
+      onSuccess: async () => {
+        // Get user profile and navigate
+        navigate("/dashboard");
+      },
+    });
   };
 
   return (
@@ -70,43 +64,73 @@ export const LoginPage: React.FC = () => {
         </Box>
 
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <Box display="flex" flexDirection="column" gap={3}>
-              {error && <Alert severity="error">{error}</Alert>}
+              {isError && (
+                <Alert severity="error">
+                  {error instanceof Error
+                    ? error.message
+                    : "Login failed. Please check your credentials."}
+                </Alert>
+              )}
 
-              <TextField
-                fullWidth
-                label="Email Address"
+              <Controller
                 name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-                autoFocus
+                control={control}
+                rules={{
+                  required: "Email is required",
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Invalid email address",
+                  },
+                }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Email Address"
+                    type="email"
+                    autoComplete="email"
+                    autoFocus
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                  />
+                )}
               />
 
-              <TextField
-                fullWidth
-                label="Password"
+              <Controller
                 name="password"
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={handleChange}
-                required
-                autoComplete="current-password"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                control={control}
+                rules={{
+                  required: "Password is required",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters",
+                  },
                 }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
               />
 
               <Button
@@ -114,11 +138,11 @@ export const LoginPage: React.FC = () => {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={loading}
+                disabled={isPending}
                 startIcon={<LoginIcon />}
                 sx={{ py: 1.5 }}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {isPending ? "Signing in..." : "Sign In"}
               </Button>
 
               <Box textAlign="center">

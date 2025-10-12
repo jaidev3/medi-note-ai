@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useForm, Controller } from "react-hook-form";
 import {
   Container,
   Box,
@@ -15,7 +16,7 @@ import {
   Grid,
 } from "@mui/material";
 import { Visibility, VisibilityOff, PersonAdd } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
+import { useRegister, useLogin } from "@/hooks/useAuthApi";
 import { RegisterRequest } from "@/lib";
 
 const ROLES = [
@@ -26,41 +27,41 @@ const ROLES = [
 ];
 
 export const RegisterPage: React.FC = () => {
-  const { register } = useAuth();
-  const [formData, setFormData] = useState<RegisterRequest>({
-    name: "",
-    email: "",
-    password: "",
-    role: "AUDIOLOGISTS",
-    department: "",
-    employee_id: "",
-    phone_number: "",
-  });
+  const navigate = useNavigate();
+  const { mutate: register, isPending, isError, error } = useRegister();
+  const { mutate: login } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError("");
-  };
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterRequest>({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: "AUDIOLOGISTS",
+      department: "",
+      employee_id: "",
+      phone_number: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      await register(formData);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Registration failed. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
+  const onSubmit = (data: RegisterRequest) => {
+    register(data, {
+      onSuccess: () => {
+        // Auto-login after registration
+        login(
+          { email: data.email, password: data.password },
+          {
+            onSuccess: () => {
+              navigate("/dashboard");
+            },
+          }
+        );
+      },
+    });
   };
 
   return (
@@ -81,106 +82,164 @@ export const RegisterPage: React.FC = () => {
         </Box>
 
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <Box display="flex" flexDirection="column" gap={3}>
-              {error && <Alert severity="error">{error}</Alert>}
+              {isError && (
+                <Alert severity="error">
+                  {error instanceof Error
+                    ? error.message
+                    : "Registration failed. Please try again."}
+                </Alert>
+              )}
 
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
+                  <Controller
                     name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    autoFocus
+                    control={control}
+                    rules={{ required: "Name is required" }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Full Name"
+                        autoFocus
+                        error={!!errors.name}
+                        helperText={errors.name?.message}
+                      />
+                    )}
                   />
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email Address"
+                  <Controller
                     name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    autoComplete="email"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    autoComplete="new-password"
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={() => setShowPassword(!showPassword)}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
+                    control={control}
+                    rules={{
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: "Invalid email address",
+                      },
                     }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Email Address"
+                        type="email"
+                        autoComplete="email"
+                        error={!!errors.email}
+                        helperText={errors.email?.message}
+                      />
+                    )}
                   />
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Role"
+                  <Controller
+                    name="password"
+                    control={control}
+                    rules={{
+                      required: "Password is required",
+                      minLength: {
+                        value: 6,
+                        message: "Password must be at least 6 characters",
+                      },
+                    }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        error={!!errors.password}
+                        helperText={errors.password?.message}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={() => setShowPassword(!showPassword)}
+                                edge="end"
+                              >
+                                {showPassword ? (
+                                  <VisibilityOff />
+                                ) : (
+                                  <Visibility />
+                                )}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Controller
                     name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    required
-                  >
-                    {ROLES.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Department (Optional)"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
+                    control={control}
+                    rules={{ required: "Role is required" }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        select
+                        label="Role"
+                        error={!!errors.role}
+                        helperText={errors.role?.message}
+                      >
+                        {ROLES.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
                   />
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Employee ID (Optional)"
+                  <Controller
+                    name="department"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Department (Optional)"
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Controller
                     name="employee_id"
-                    value={formData.employee_id}
-                    onChange={handleChange}
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Employee ID (Optional)"
+                      />
+                    )}
                   />
                 </Grid>
 
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Phone Number (Optional)"
+                  <Controller
                     name="phone_number"
-                    value={formData.phone_number}
-                    onChange={handleChange}
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Phone Number (Optional)"
+                      />
+                    )}
                   />
                 </Grid>
               </Grid>
@@ -190,11 +249,11 @@ export const RegisterPage: React.FC = () => {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={loading}
+                disabled={isPending}
                 startIcon={<PersonAdd />}
                 sx={{ py: 1.5 }}
               >
-                {loading ? "Creating account..." : "Create Account"}
+                {isPending ? "Creating account..." : "Create Account"}
               </Button>
 
               <Box textAlign="center">
