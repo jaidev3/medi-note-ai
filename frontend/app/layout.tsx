@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
-
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
@@ -16,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Echo Notes - AI-Powered SOAP Note Generation",
+  title: "MediNote AI - AI-Powered SOAP Note Generation",
   description: "AI-powered SOAP note generation for hearing care professionals",
 };
 

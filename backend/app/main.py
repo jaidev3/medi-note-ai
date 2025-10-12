@@ -1,5 +1,5 @@
 """
-Echo Notes Backend - AI-Powered SOAP Note Generation System
+MediNote AI Backend - AI-Powered SOAP Note Generation System
 FastAPI application main entry point
 """
 import os
@@ -37,21 +37,21 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager for startup and shutdown events."""
     # Startup
-    logger.info("🚀 Starting Echo Notes Backend...")
+    logger.info("🚀 Starting MediNote AI Backend...")
 
-    logger.info("✅ Echo Notes Backend started successfully")
+    logger.info("✅ MediNote AI Backend started successfully")
     
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down Echo Notes Backend...")
+    logger.info("🛑 Shutting down MediNote AI Backend...")
     
-    logger.info("✅ Echo Notes Backend shutdown complete")
+    logger.info("✅ MediNote AI Backend shutdown complete")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="Echo Notes Backend",
+    title="MediNote AI Backend",
     description="AI-Powered SOAP Note Generation System for Hearing Care Professionals",
     version="1.0.0",
     docs_url="/docs",
@@ -121,7 +121,7 @@ async def health_check():
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Echo Notes Backend API",
+        "message": "MediNote AI Backend API",
         "description": "AI-Powered SOAP Note Generation System",
         "version": "1.0.0",
         "docs_url": "/docs",

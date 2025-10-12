@@ -1,4 +1,4 @@
-# Echo Notes - AI-Powered SOAP Note Generation System
+# MediNote AI - AI-Powered SOAP Note Generation System
 
 **An intelligent healthcare documentation platform for hearing care professionals**
 
@@ -12,7 +12,7 @@
 
 ## 🎯 **Project Overview**
 
-Echo Notes revolutionizes healthcare documentation by using advanced AI to automatically generate SOAP (Subjective, Objective, Assessment, Plan) notes from patient visit transcripts. Built with a modern microservice architecture, it ensures scalability, security, and performance for healthcare professionals.
+MediNote AI revolutionizes healthcare documentation by using advanced AI to automatically generate SOAP (Subjective, Objective, Assessment, Plan) notes from patient visit transcripts. Built with a modern microservice architecture, it ensures scalability, security, and performance for healthcare professionals.
 
 ### **🏥 Key Features**
 
@@ -29,7 +29,7 @@ Echo Notes revolutionizes healthcare documentation by using advanced AI to autom
 
 ### **Microservice Design Pattern**
 
-Echo Notes follows a **microservice architecture** with clear separation between business logic and AI operations:
+MediNote AI follows a **microservice architecture** with clear separation between business logic and AI operations:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

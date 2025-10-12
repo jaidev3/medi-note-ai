@@ -1,5 +1,5 @@
 # =============================================================================
-# MULTI-STAGE DOCKERFILE FOR ECHO NOTES BACKEND PRODUCTION
+# MULTI-STAGE DOCKERFILE FOR MediNote AI BACKEND PRODUCTION
 # Stage 1: Builder (Heavy build operations, gets discarded)
 # Stage 2: Production (Lightweight runtime image)
 # Expected size reduction: 12.2GB → ~3.5GB (70% smaller)
@@ -114,7 +114,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Production startup command (removed --reload for production)
 CMD ["sh", "-c", "\
-    echo '🚀 Echo Notes Backend (Production) Starting...' && \
+    echo '🚀 MediNote AI Backend (Production) Starting...' && \
     echo '🔄 Running database migrations...' && \
     python run_migrations.py && \
     echo '🌟 Starting FastAPI application in production mode...' && \

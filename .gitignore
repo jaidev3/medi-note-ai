@@ -1,5 +1,5 @@
 # =============================================================================
-# ECHO NOTES MONOREPO - COMPREHENSIVE GITIGNORE
+# MediNote AI MONOREPO - COMPREHENSIVE GITIGNORE
 # Protects sensitive data across Backend, AI Service, and Frontend
 # =============================================================================
 
@@ -695,7 +695,7 @@ values.staging.yaml
 !supervisord.conf
 
 # =============================================================================
-# ECHO NOTES SPECIFIC NOTES
+# MediNote AI SPECIFIC NOTES
 # =============================================================================
 #
 # This comprehensive .gitignore protects:
@@ -747,7 +747,7 @@ values.staging.yaml
 # - Confirm: No API keys in code
 # - Review: All sensitive data excluded
 #
-# For Echo Notes specifically:
+# For MediNote AI specifically:
 # - OPENAI_API_KEY must never be committed
 # - HUGGINGFACEHUB_API_TOKEN must never be committed
 # - JWT_SECRET_KEY must never be committed

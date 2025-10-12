@@ -1,19 +1,25 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LoadingPage } from '@/components/ui/loading'
-import { authApi, usersApi, UserProfile, UserStatsResponse } from '@/routes'
-import { 
-  Users, 
-  FileText, 
-  Upload, 
-  Search, 
-  Settings, 
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { LoadingPage } from "@/components/ui/loading";
+import { authApi, usersApi, UserProfile, UserStatsResponse } from "@/routes";
+import {
+  Users,
+  FileText,
+  Upload,
+  Search,
+  Settings,
   LogOut,
   Plus,
   Calendar,
@@ -22,64 +28,64 @@ import {
   Link as LinkIcon,
   Eye,
   HelpCircle,
-  Home
-} from 'lucide-react'
+  Home,
+} from "lucide-react";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [stats, setStats] = useState<UserStatsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [stats, setStats] = useState<UserStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem("access_token");
     if (!token) {
-      router.push('/login')
-      return
+      router.push("/login");
+      return;
     }
 
     const fetchUserData = async () => {
       try {
         const [userData, statsData] = await Promise.all([
           authApi.getCurrentUser(token),
-          usersApi.getUserStats(token)
-        ])
-        setUser(userData)
-        setStats(statsData)
+          usersApi.getUserStats(token),
+        ]);
+        setUser(userData);
+        setStats(statsData);
       } catch (error) {
-        console.error('Failed to fetch user data:', error)
-        localStorage.removeItem('access_token')
-        router.push('/login')
+        console.error("Failed to fetch user data:", error);
+        localStorage.removeItem("access_token");
+        router.push("/login");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchUserData()
-  }, [router])
+    fetchUserData();
+  }, [router]);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem("access_token");
     if (token) {
       try {
-        await authApi.logout(token)
+        await authApi.logout(token);
         // Logged out successfully!
       } catch (error) {
-        console.error('Logout error:', error)
+        console.error("Logout error:", error);
         // Logout failed
       }
     }
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    router.push('/login')
-  }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    router.push("/login");
+  };
 
   if (loading) {
-    return <LoadingPage text="Loading dashboard..." />
+    return <LoadingPage text="Loading dashboard..." />;
   }
 
   if (!user) {
-    return null
+    return null;
   }
 
   return (
@@ -93,17 +99,23 @@ export default function DashboardPage() {
                 <Home className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Echo Notes</h1>
-                <p className="text-slate-600">AI-powered hearing care documentation</p>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  MediNote AI
+                </h1>
+                <p className="text-slate-600">
+                  AI-powered hearing care documentation
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-slate-900">{user.name}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {user.name}
+                </p>
                 <p className="text-xs text-slate-500">{user.role}</p>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleLogout}
                 className="h-12 border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl"
               >
@@ -125,7 +137,8 @@ export default function DashboardPage() {
                 Welcome back, {user.name}!
               </h2>
               <p className="text-slate-600 text-lg">
-                Here's an overview of your clinical activities and quick access to key features.
+                Here's an overview of your clinical activities and quick access
+                to key features.
               </p>
             </div>
           </div>
@@ -141,8 +154,12 @@ export default function DashboardPage() {
                     <Users className="h-6 w-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-bold text-slate-600">Total Patients</p>
-                    <p className="text-xl font-medium text-slate-900">{stats.total_patients}</p>
+                    <p className="text-sm font-bold text-slate-600">
+                      Total Patients
+                    </p>
+                    <p className="text-xl font-medium text-slate-900">
+                      {stats.total_patients}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -155,8 +172,12 @@ export default function DashboardPage() {
                     <Calendar className="h-6 w-6 text-emerald-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-bold text-slate-600">Total Sessions</p>
-                    <p className="text-xl font-medium text-slate-900">{stats.total_sessions}</p>
+                    <p className="text-sm font-bold text-slate-600">
+                      Total Sessions
+                    </p>
+                    <p className="text-xl font-medium text-slate-900">
+                      {stats.total_sessions}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -169,8 +190,12 @@ export default function DashboardPage() {
                     <FileText className="h-6 w-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-bold text-slate-600">Total SOAP Notes</p>
-                    <p className="text-xl font-medium text-slate-900">{stats.total_soap_notes}</p>
+                    <p className="text-sm font-bold text-slate-600">
+                      Total SOAP Notes
+                    </p>
+                    <p className="text-xl font-medium text-slate-900">
+                      {stats.total_soap_notes}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -183,8 +208,12 @@ export default function DashboardPage() {
                     <Upload className="h-6 w-6 text-orange-600" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-bold text-slate-600">Documents</p>
-                    <p className="text-xl font-medium text-slate-900">{stats.total_documents}</p>
+                    <p className="text-sm font-bold text-slate-600">
+                      Documents
+                    </p>
+                    <p className="text-xl font-medium text-slate-900">
+                      {stats.total_documents}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -194,7 +223,9 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <div className="mb-12">
-          <h3 className="text-xl font-semibold text-slate-900 mb-6">Quick Actions</h3>
+          <h3 className="text-xl font-semibold text-slate-900 mb-6">
+            Quick Actions
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group">
               <Link href="/patients">
@@ -309,7 +340,9 @@ export default function DashboardPage() {
         {/* Recent Activity */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
+            <h3 className="text-lg font-semibold text-slate-900">
+              Recent Activity
+            </h3>
           </div>
           <div className="p-6">
             <div className="space-y-4">
@@ -330,5 +363,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }
