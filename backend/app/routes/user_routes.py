@@ -73,9 +73,21 @@ async def update_professional(
             detail="You can only update your own profile"
         )
     
-    # TODO: Implement professional update logic
-    # This would involve creating a professional update service method
-    return current_user
+    # Call controller to update professional
+    updated_professional = await user_controller.update_professional(professional_id, update_data)
+    
+    # Convert ProfessionalResponse to UserRead for response
+    return UserRead(
+        id=updated_professional.id,
+        email=updated_professional.email,
+        name=updated_professional.name,
+        role=updated_professional.role,
+        department=updated_professional.department,
+        employee_id=updated_professional.employee_id,
+        phone_number=updated_professional.phone_number,
+        created_at=updated_professional.created_at,
+        updated_at=updated_professional.updated_at
+    )
 
 
 @router.get("/stats", response_model=UserStatsResponse, summary="Get User Statistics")

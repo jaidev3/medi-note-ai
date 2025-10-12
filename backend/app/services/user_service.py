@@ -658,6 +658,76 @@ class UserService:
                 logger.error("❌ Failed to get user stats", error=str(e))
                 return UserStatsResponse()
     
+    async def update_professional(self, professional_id: uuid.UUID, request: ProfessionalUpdateRequest) -> Optional[ProfessionalResponse]:
+        """
+        Update professional information.
+        
+        Args:
+            professional_id: Professional UUID
+            request: Professional update request
+            
+        Returns:
+            ProfessionalResponse: Updated professional information or None
+        """
+        async with async_session_maker() as session:
+            try:
+                stmt = select(Professional).where(Professional.id == professional_id)
+                result = await session.execute(stmt)
+                professional = result.scalar_one_or_none()
+                
+                if not professional:
+                    return None
+                
+                # Update fields if provided
+                if request.name is not None:
+                    professional.name = request.name
+                if request.phone_number is not None:
+                    professional.phone_number = request.phone_number
+                if request.department is not None:
+                    professional.department = request.department
+                if request.employee_id is not None:
+                    professional.employee_id = request.employee_id
+                
+                # Update timestamp
+                professional.updated_at = datetime.now(timezone.utc)
+                
+                await session.commit()
+                await session.refresh(professional)
+                
+                logger.info("✅ Professional updated successfully", professional_id=str(professional_id))
+                
+                # Get counts for response
+                sessions_stmt = select(func.count(PatientVisitSessions.session_id)).where(
+                    PatientVisitSessions.professional_id == professional.id
+                )
+                sessions_result = await session.execute(sessions_stmt)
+                total_sessions = sessions_result.scalar() or 0
+                
+                soap_notes_stmt = select(func.count(SessionSoapNotes.note_id)).where(
+                    SessionSoapNotes.professional_id == professional.id
+                )
+                soap_notes_result = await session.execute(soap_notes_stmt)
+                total_soap_notes = soap_notes_result.scalar() or 0
+                
+                return ProfessionalResponse(
+                    id=professional.id,
+                    name=professional.name,
+                    email=professional.email,
+                    role=professional.role,
+                    department=professional.department,
+                    employee_id=professional.employee_id,
+                    phone_number=professional.phone_number,
+                    created_at=professional.created_at,
+                    updated_at=professional.updated_at,
+                    total_sessions=total_sessions,
+                    total_soap_notes=total_soap_notes
+                )
+                
+            except Exception as e:
+                await session.rollback()
+                logger.error("❌ Failed to update professional", error=str(e), professional_id=str(professional_id))
+                raise
+    
     async def list_professionals(self, page: int = 1, page_size: int = 20, search: Optional[str] = None) -> ProfessionalListResponse:
         """
         Get all professionals with pagination and optional search.

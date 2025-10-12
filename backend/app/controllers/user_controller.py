@@ -363,6 +363,48 @@ class UserController:
                 detail="Failed to retrieve user statistics"
             )
     
+    async def update_professional(
+        self,
+        professional_id: uuid.UUID,
+        update_data: ProfessionalUpdateRequest
+    ) -> ProfessionalResponse:
+        """
+        Update professional information.
+        
+        Args:
+            professional_id: Professional UUID
+            update_data: Updated professional data
+            
+        Returns:
+            ProfessionalResponse: Updated professional information
+            
+        Raises:
+            HTTPException: If professional not found or update fails
+        """
+        try:
+            updated_professional = await self.user_service.update_professional(professional_id, update_data)
+            if not updated_professional:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Professional not found"
+                )
+            return updated_professional
+            
+        except ValueError as e:
+            logger.warning("Professional update validation error", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Professional update error", error=str(e), professional_id=str(professional_id))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update professional"
+            )
+    
     async def list_professionals(self, page: int = 1, page_size: int = 20, search: Optional[str] = None) -> ProfessionalListResponse:
         """
         Get all professionals with pagination and optional search.
