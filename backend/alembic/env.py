@@ -1,8 +1,4 @@
-"""
-Alembic environment configuration for async SQLAlchemy setup
-"""
 import asyncio
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -10,17 +6,6 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
-# Import all models to ensure they are registered with Base.metadata
-from app.models import (
-    professional,
-    patients,
-    patient_visit_sessions,
-    uploaded_documents,
-    session_soap_notes,
-    audit_log
-)
-from app.database.db import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,15 +16,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Set database URL from environment variable
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5433/echo_note_rag"
-)
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
-
-# Add your model's MetaData object here for 'autogenerate' support
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+from app.database.db import Base
+# import models so that they are registered with Base.metadata for autogenerate
+import app.models  # noqa: F401
 target_metadata = Base.metadata
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
@@ -52,6 +41,7 @@ def run_migrations_offline() -> None:
 
     Calls to context.execute() here emit the given string to the
     script output.
+
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -59,7 +49,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # Enable batch mode for SQLite compatibility
     )
 
     with context.begin_transaction():
@@ -67,19 +56,18 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    """Run migrations with given connection."""
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        render_as_batch=True,  # Enable batch mode
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
-    """Create an Engine and run migrations asynchronously."""
+    """In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -94,6 +82,7 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+
     asyncio.run(run_async_migrations())
 
 

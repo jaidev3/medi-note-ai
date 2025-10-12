@@ -13,6 +13,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
+
+
 # Configure structured logging
 structlog.configure(
     processors=[

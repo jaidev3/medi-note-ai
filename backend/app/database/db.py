@@ -9,14 +9,14 @@ from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 import structlog
+import dotenv
+
+dotenv.load_dotenv()
 
 logger = structlog.get_logger(__name__)
 
 # Database URL from environment
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql+asyncpg://postgres:postgres@localhost:5433/echo_note_rag"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create async engine
 engine = create_async_engine(
