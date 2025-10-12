@@ -1,47 +1,76 @@
 """
-SOAP Note Generation API Endpoints
+AI SOAP Generation API Routes
+Direct AI-powered SOAP note generation without external service
 """
 import uuid
 from typing import Optional
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.soap_schemas import SOAPGenerationRequest, SOAPGenerationResponse
-from services.soap_service import SOAPGenerationService
-from services.ner_service import NERService
-from services.pii_service import PIIService
+from app.schemas.soap_schemas import SOAPGenerationRequest, SOAPGenerationResponse
+from app.services.ai.soap_service import SOAPGenerationService
+from app.services.ai.ner_service import NERService
+from app.services.ai.pii_service import PIIService
+from app.database.dep import get_db
 
 logger = structlog.get_logger(__name__)
 
 # Create router
 router = APIRouter()
 
-# Initialize services
-soap_service = SOAPGenerationService()
-ner_service = NERService()
-pii_service = PIIService()
+# Initialize services (singleton pattern)
+soap_service = None
+ner_service = None
+pii_service = None
+
+
+def get_soap_service() -> SOAPGenerationService:
+    """Get or create SOAP service instance."""
+    global soap_service
+    if soap_service is None:
+        soap_service = SOAPGenerationService()
+    return soap_service
+
+
+def get_ner_service() -> NERService:
+    """Get or create NER service instance."""
+    global ner_service
+    if ner_service is None:
+        ner_service = NERService()
+    return ner_service
+
+
+def get_pii_service() -> PIIService:
+    """Get or create PII service instance."""
+    global pii_service
+    if pii_service is None:
+        pii_service = PIIService()
+    return pii_service
 
 
 @router.post("/generate", response_model=SOAPGenerationResponse, summary="Generate SOAP Note")
-async def generate_soap_note(request: SOAPGenerationRequest):
+async def generate_soap_note(
+    request: SOAPGenerationRequest,
+    soap_svc: SOAPGenerationService = Depends(get_soap_service),
+    ner_svc: NERService = Depends(get_ner_service),
+    pii_svc: PIIService = Depends(get_pii_service)
+):
     """
     Generate SOAP note from clinical text using AI pipeline.
     
     This endpoint runs the complete AI pipeline:
     1. Optional PII masking for patient privacy
     2. NER extraction for medical entities
-    3. SOAP note generation using HuggingFace biomedical model
-    4. Judge LLM validation with OpenAI
+    3. SOAP note generation using Google Gemini
+    4. Judge LLM validation
     
     Args:
         request: SOAP generation request with clinical text and parameters
         
     Returns:
         SOAPGenerationResponse: Generated and validated SOAP note
-        
-    Note:
-        This is the AI service version - database operations are handled by main backend
     """
     try:
         logger.info("SOAP generation requested", 
@@ -55,7 +84,7 @@ async def generate_soap_note(request: SOAPGenerationRequest):
         
         if request.enable_pii_masking:
             logger.info("🔒 Applying PII masking")
-            from schemas.pii_schemas import PIIAnonymizationRequest
+            from app.schemas.pii_schemas import PIIAnonymizationRequest
             
             pii_request = PIIAnonymizationRequest(
                 text=request.text,
@@ -63,7 +92,7 @@ async def generate_soap_note(request: SOAPGenerationRequest):
                 score_threshold=0.5
             )
             
-            pii_response = await pii_service.anonymize_text(pii_request)
+            pii_response = await pii_svc.anonymize_text(pii_request)
             
             if pii_response.success:
                 processed_text = pii_response.anonymized_text
@@ -79,12 +108,12 @@ async def generate_soap_note(request: SOAPGenerationRequest):
         context_data = None
         if request.include_context:
             logger.info("🔍 Extracting NER context")
-            context_data = await ner_service.extract_context_data(processed_text)
+            context_data = await ner_svc.extract_context_data(processed_text)
             logger.info("✅ NER context extracted", entity_count=context_data.get("total_entities", 0))
         
         # Step 3: Generate SOAP note
         logger.info("🤖 Generating SOAP note")
-        soap_response = await soap_service.generate_soap_note(
+        soap_response = await soap_svc.generate_soap_note(
             request=request,
             context_data=context_data,
             pii_masked_text=processed_text if pii_masked else None
@@ -108,14 +137,18 @@ async def generate_soap_note(request: SOAPGenerationRequest):
         )
 
 
-@router.get("/health", summary="SOAP Service Health Check")
-async def soap_health_check():
-    """Health check for SOAP generation service."""
+@router.get("/health", summary="AI SOAP Service Health Check")
+async def ai_soap_health_check(
+    soap_svc: SOAPGenerationService = Depends(get_soap_service),
+    ner_svc: NERService = Depends(get_ner_service),
+    pii_svc: PIIService = Depends(get_pii_service)
+):
+    """Health check for AI SOAP generation service."""
     try:
         # Check if services are initialized
-        soap_ready = soap_service.soap_model is not None and soap_service.judge_model is not None
-        ner_ready = ner_service.model is not None
-        pii_ready = pii_service.model is not None
+        soap_ready = soap_svc.soap_model is not None and soap_svc.judge_model is not None
+        ner_ready = ner_svc.model is not None
+        pii_ready = pii_svc.model is not None
         
         return {
             "status": "healthy" if all([soap_ready, ner_ready, pii_ready]) else "degraded",
@@ -131,7 +164,7 @@ async def soap_health_check():
             }
         }
     except Exception as e:
-        logger.error("SOAP health check failed", error=str(e))
+        logger.error("AI SOAP health check failed", error=str(e))
         return {
             "status": "unhealthy",
             "error": str(e)

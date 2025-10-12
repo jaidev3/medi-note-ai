@@ -1,27 +1,39 @@
 """
-PII Detection and Anonymization API Endpoints
+AI PII Detection and Anonymization API Routes
+Direct AI-powered PII processing without external service
 """
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 
-from schemas.pii_schemas import (
+from app.schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse,
     PIIAnonymizationRequest, PIIAnonymizationResponse
 )
-from services.pii_service import PIIService
+from app.services.ai.pii_service import PIIService
 
 logger = structlog.get_logger(__name__)
 
 # Create router
 router = APIRouter()
 
-# Initialize service
-pii_service = PIIService()
+# Initialize service (singleton pattern)
+pii_service = None
+
+
+def get_pii_service() -> PIIService:
+    """Get or create PII service instance."""
+    global pii_service
+    if pii_service is None:
+        pii_service = PIIService()
+    return pii_service
 
 
 @router.post("/analyze", response_model=PIIAnalysisResponse, summary="Analyze Text for PII")
-async def analyze_text_for_pii(request: PIIAnalysisRequest):
+async def analyze_text_for_pii(
+    request: PIIAnalysisRequest,
+    pii_svc: PIIService = Depends(get_pii_service)
+):
     """
     Analyze clinical text for personally identifiable information (PII).
     
@@ -43,7 +55,7 @@ async def analyze_text_for_pii(request: PIIAnalysisRequest):
         logger.info("PII analysis requested", text_length=len(request.text))
         
         # Analyze for PII
-        response = await pii_service.analyze_text(request)
+        response = await pii_svc.analyze_text(request)
         
         logger.info("✅ PII analysis completed", 
                    entities_found=response.total_entities,
@@ -60,7 +72,10 @@ async def analyze_text_for_pii(request: PIIAnalysisRequest):
 
 
 @router.post("/anonymize", response_model=PIIAnonymizationResponse, summary="Anonymize PII in Text")
-async def anonymize_pii_in_text(request: PIIAnonymizationRequest):
+async def anonymize_pii_in_text(
+    request: PIIAnonymizationRequest,
+    pii_svc: PIIService = Depends(get_pii_service)
+):
     """
     Anonymize personally identifiable information in clinical text.
     
@@ -79,7 +94,7 @@ async def anonymize_pii_in_text(request: PIIAnonymizationRequest):
                    preserve_medical=request.preserve_medical_context)
         
         # Anonymize PII
-        response = await pii_service.anonymize_text(request)
+        response = await pii_svc.anonymize_text(request)
         
         logger.info("✅ PII anonymization completed", 
                    entities_anonymized=response.entities_count,
@@ -96,7 +111,11 @@ async def anonymize_pii_in_text(request: PIIAnonymizationRequest):
 
 
 @router.post("/quick-anonymize", summary="Quick PII Anonymization")
-async def quick_anonymize_text(text: str, preserve_medical: bool = True):
+async def quick_anonymize_text(
+    text: str,
+    preserve_medical: bool = True,
+    pii_svc: PIIService = Depends(get_pii_service)
+):
     """
     Quick anonymization endpoint for internal use.
     
@@ -113,7 +132,7 @@ async def quick_anonymize_text(text: str, preserve_medical: bool = True):
         logger.info("Quick PII anonymization requested", text_length=len(text))
         
         # Use quick anonymization method
-        anonymized_text, has_pii = await pii_service.quick_anonymize(text)
+        anonymized_text, has_pii = await pii_svc.quick_anonymize(text)
         
         logger.info("✅ Quick PII anonymization completed", has_pii=has_pii)
         
@@ -133,12 +152,12 @@ async def quick_anonymize_text(text: str, preserve_medical: bool = True):
         )
 
 
-@router.get("/health", summary="PII Service Health Check")
-async def pii_health_check():
-    """Health check for PII service."""
+@router.get("/health", summary="AI PII Service Health Check")
+async def ai_pii_health_check(pii_svc: PIIService = Depends(get_pii_service)):
+    """Health check for AI PII service."""
     try:
         # Check if Gemini model is initialized
-        model_ready = pii_service.model is not None
+        model_ready = pii_svc.model is not None
 
         return {
             "status": "healthy" if model_ready else "unhealthy",
@@ -153,7 +172,7 @@ async def pii_health_check():
             ]
         }
     except Exception as e:
-        logger.error("PII health check failed", error=str(e))
+        logger.error("AI PII health check failed", error=str(e))
         return {
             "status": "unhealthy",
             "error": str(e)

@@ -1,31 +1,43 @@
 """
-Embeddings Generation API Endpoints
+AI Embeddings Generation API Routes
+Direct AI-powered embedding generation without external service
 """
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 
-from schemas.rag_schemas import (
+from app.schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse,
     BatchEmbeddingRequest, BatchEmbeddingResponse
 )
-from services.rag_service import RAGService
+from app.services.ai.rag_service import RAGService
 
 logger = structlog.get_logger(__name__)
 
 # Create router
 router = APIRouter()
 
-# Initialize service
-rag_service = RAGService()
+# Initialize service (singleton pattern)
+rag_service = None
+
+
+def get_rag_service() -> RAGService:
+    """Get or create RAG service instance."""
+    global rag_service
+    if rag_service is None:
+        rag_service = RAGService()
+    return rag_service
 
 
 @router.post("/generate", response_model=EmbeddingResponse, summary="Generate Text Embedding")
-async def generate_text_embedding(request: EmbeddingRequest):
+async def generate_text_embedding(
+    request: EmbeddingRequest,
+    rag_svc: RAGService = Depends(get_rag_service)
+):
     """
     Generate embedding vector for a single text.
     
-    Uses OpenAI's text-embedding model to create high-dimensional vector
+    Uses Google Gemini's text-embedding model to create high-dimensional vector
     representations suitable for semantic search and similarity comparisons.
     
     Args:
@@ -38,7 +50,7 @@ async def generate_text_embedding(request: EmbeddingRequest):
         logger.info("Text embedding requested", text_length=len(request.text))
         
         # Generate embedding
-        response = await rag_service.generate_embedding(request)
+        response = await rag_svc.generate_embedding(request)
         
         logger.info("✅ Text embedding completed", 
                    success=response.success,
@@ -55,7 +67,10 @@ async def generate_text_embedding(request: EmbeddingRequest):
 
 
 @router.post("/batch", response_model=BatchEmbeddingResponse, summary="Generate Batch Embeddings")
-async def generate_batch_embeddings(request: BatchEmbeddingRequest):
+async def generate_batch_embeddings(
+    request: BatchEmbeddingRequest,
+    rag_svc: RAGService = Depends(get_rag_service)
+):
     """
     Generate embedding vectors for multiple texts in batch.
     
@@ -72,7 +87,7 @@ async def generate_batch_embeddings(request: BatchEmbeddingRequest):
         logger.info("Batch embedding requested", text_count=len(request.texts))
         
         # Generate batch embeddings
-        response = await rag_service.generate_batch_embeddings(request)
+        response = await rag_svc.generate_batch_embeddings(request)
         
         logger.info("✅ Batch embedding completed", 
                    processed=response.processed_count,
@@ -89,7 +104,10 @@ async def generate_batch_embeddings(request: BatchEmbeddingRequest):
 
 
 @router.post("/soap-content", response_model=EmbeddingResponse, summary="Generate SOAP Content Embedding")
-async def generate_soap_content_embedding(content: dict):
+async def generate_soap_content_embedding(
+    content: dict,
+    rag_svc: RAGService = Depends(get_rag_service)
+):
     """
     Generate embedding for SOAP note content.
     
@@ -106,7 +124,7 @@ async def generate_soap_content_embedding(content: dict):
         logger.info("SOAP content embedding requested")
         
         # Generate embedding for SOAP content
-        embedding = await rag_service.embed_soap_note_content(content)
+        embedding = await rag_svc.embed_soap_note_content(content)
         
         if embedding:
             logger.info("✅ SOAP content embedding completed", dimension=len(embedding))
@@ -135,19 +153,19 @@ async def generate_soap_content_embedding(content: dict):
         )
 
 
-@router.get("/health", summary="Embeddings Service Health Check")
-async def embeddings_health_check():
-    """Health check for embeddings service."""
+@router.get("/health", summary="AI Embeddings Service Health Check")
+async def ai_embeddings_health_check(rag_svc: RAGService = Depends(get_rag_service)):
+    """Health check for AI embeddings service."""
     try:
         # Check if embedding model is initialized
-        model_ready = rag_service.embedding_model is not None
+        model_ready = rag_svc.embedding_model is not None
         
         return {
             "status": "healthy" if model_ready else "unhealthy",
             "model_loaded": model_ready,
             "model_name": "Google Gemini",
             "provider": "Google Gemini",
-            "dimension": 1536,  # Default dimension for Google Gemini
+            "dimension": 768,  # Default dimension for Google Gemini
             "capabilities": [
                 "single_text_embedding",
                 "batch_embedding",
@@ -156,7 +174,7 @@ async def embeddings_health_check():
             ]
         }
     except Exception as e:
-        logger.error("Embeddings health check failed", error=str(e))
+        logger.error("AI Embeddings health check failed", error=str(e))
         return {
             "status": "unhealthy",
             "error": str(e)

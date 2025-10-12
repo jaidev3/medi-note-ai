@@ -1,5 +1,5 @@
 """
-SOAP Note Generation Service for AI Microservice
+SOAP Note Generation Service
 Implements AI-powered SOAP note generation with Judge LLM validation using Google Gemini
 """
 import os
@@ -12,11 +12,11 @@ from datetime import datetime
 import structlog
 import google.generativeai as genai
 
-from schemas.soap_schemas import (
+from app.schemas.soap_schemas import (
     SOAPNote, SOAPSection, SOAPGenerationRequest, 
     SOAPGenerationResponse, JudgeLLMResponse
 )
-from schemas.ner_schemas import NEROutput
+from app.schemas.ner_schemas import NEROutput
 
 logger = structlog.get_logger(__name__)
 
@@ -33,9 +33,9 @@ class SOAPGenerationService:
     def _initialize_models(self):
         """Initialize Gemini models for SOAP generation and validation."""
         try:
-            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
-            gemini_model = os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")
-            temperature = float(os.getenv("AI_SERVICE_TEMPERATURE", "0.1"))
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+            gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
             
             logger.info("Initializing Gemini models for SOAP generation and Judge validation")
             
@@ -298,7 +298,7 @@ Return ONLY the JSON assessment, no additional text."""
         """
         start_time = time.time()
         regeneration_count = 0
-        max_regenerations = int(os.getenv("AI_SERVICE_SOAP_MAX_RETRIES", "3"))
+        max_regenerations = int(os.getenv("SOAP_MAX_RETRIES", "3"))
         
         try:
             logger.info(

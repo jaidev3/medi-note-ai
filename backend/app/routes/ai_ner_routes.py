@@ -1,29 +1,41 @@
 """
-NER (Named Entity Recognition) API Endpoints
+AI NER (Named Entity Recognition) API Routes
+Direct AI-powered entity extraction without external service
 """
 import structlog
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 
-from schemas.ner_schemas import NERRequest, NERResponse
-from services.ner_service import NERService
+from app.schemas.ner_schemas import NERRequest, NERResponse
+from app.services.ai.ner_service import NERService
 
 logger = structlog.get_logger(__name__)
 
 # Create router
 router = APIRouter()
 
-# Initialize service
-ner_service = NERService()
+# Initialize service (singleton pattern)
+ner_service = None
+
+
+def get_ner_service() -> NERService:
+    """Get or create NER service instance."""
+    global ner_service
+    if ner_service is None:
+        ner_service = NERService()
+    return ner_service
 
 
 @router.post("/extract", response_model=NERResponse, summary="Extract Biomedical Entities")
-async def extract_entities(request: NERRequest):
+async def extract_entities(
+    request: NERRequest,
+    ner_svc: NERService = Depends(get_ner_service)
+):
     """
     Extract biomedical entities from clinical text.
     
-    Uses a specialized biomedical NER model to identify medical entities
-    including diseases, symptoms, medications, procedures, and more.
+    Uses Google Gemini to identify medical entities including diseases, 
+    symptoms, medications, procedures, and more.
     
     Args:
         request: NER request with clinical text and processing parameters
@@ -35,7 +47,7 @@ async def extract_entities(request: NERRequest):
         logger.info("NER extraction requested", text_length=len(request.text))
         
         # Extract entities
-        ner_output = await ner_service.extract_entities(request)
+        ner_output = await ner_svc.extract_entities(request)
         
         # Create response
         response = NERResponse(
@@ -59,7 +71,10 @@ async def extract_entities(request: NERRequest):
 
 
 @router.post("/context", summary="Extract Context Data for SOAP Generation")
-async def extract_context_data(request: NERRequest):
+async def extract_context_data(
+    request: NERRequest,
+    ner_svc: NERService = Depends(get_ner_service)
+):
     """
     Extract biomedical entities as context data for SOAP note generation.
     
@@ -75,7 +90,7 @@ async def extract_context_data(request: NERRequest):
         logger.info("NER context extraction requested", text_length=len(request.text))
         
         # Extract context data
-        context_data = await ner_service.extract_context_data(request.text)
+        context_data = await ner_svc.extract_context_data(request.text)
         
         logger.info("✅ NER context extraction completed", 
                    entities_found=context_data.get("total_entities", 0))
@@ -94,12 +109,12 @@ async def extract_context_data(request: NERRequest):
         )
 
 
-@router.get("/health", summary="NER Service Health Check")
-async def ner_health_check():
-    """Health check for NER service."""
+@router.get("/health", summary="AI NER Service Health Check")
+async def ai_ner_health_check(ner_svc: NERService = Depends(get_ner_service)):
+    """Health check for AI NER service."""
     try:
         # Check if Gemini NER model is initialized
-        model_ready = ner_service.model is not None
+        model_ready = ner_svc.model is not None
         
         return {
             "status": "healthy" if model_ready else "unhealthy",
@@ -112,7 +127,7 @@ async def ner_health_check():
             ]
         }
     except Exception as e:
-        logger.error("NER health check failed", error=str(e))
+        logger.error("AI NER health check failed", error=str(e))
         return {
             "status": "unhealthy",
             "error": str(e)

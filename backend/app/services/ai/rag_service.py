@@ -1,5 +1,5 @@
 """
-RAG (Retrieval-Augmented Generation) Service for AI Microservice
+RAG (Retrieval-Augmented Generation) Service
 Implements embedding generation for SOAP notes and vector operations using Google Gemini
 """
 import os
@@ -15,7 +15,7 @@ import google.generativeai as genai
 # Load environment variables
 load_dotenv()
 
-from schemas.rag_schemas import (
+from app.schemas.rag_schemas import (
     EmbeddingRequest, EmbeddingResponse, BatchEmbeddingRequest, BatchEmbeddingResponse
 )
 
@@ -33,8 +33,8 @@ class RAGService:
     def _initialize_models(self):
         """Initialize Gemini embedding model."""
         try:
-            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
-            gemini_embedding_model = os.getenv("AI_SERVICE_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+            google_api_key = os.getenv("GOOGLE_API_KEY")
+            gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
             
             logger.info("Initializing Gemini embedding model")
             
@@ -125,7 +125,7 @@ class RAGService:
         processed_count = 0
         failed_count = 0
         
-        batch_size = int(os.getenv("AI_SERVICE_EMBEDDING_BATCH_SIZE", "50"))
+        batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "50"))
         
         try:
             logger.info("Generating Gemini batch embeddings", text_count=len(request.texts))

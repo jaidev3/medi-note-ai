@@ -138,7 +138,8 @@ async def root():
 # Include API routers
 from app.routes import (
     auth_routes, user_routes, patient_routes, document_routes, 
-    soap_routes, rag_routes, session_routes, professional_routes
+    soap_routes, rag_routes, session_routes, professional_routes,
+    ai_soap_routes, ai_ner_routes, ai_pii_routes, ai_embeddings_routes
 )
 
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
@@ -149,6 +150,12 @@ app.include_router(document_routes.router, prefix="/documents", tags=["Documents
 app.include_router(soap_routes.router, prefix="/soap", tags=["SOAP Notes"])
 app.include_router(rag_routes.router, prefix="/rag", tags=["RAG Queries"])
 app.include_router(professional_routes.router, prefix="/professionals", tags=["Professionals"])
+
+# AI Service Routes (Direct Integration)
+app.include_router(ai_soap_routes.router, prefix="/ai/soap", tags=["AI SOAP Generation"])
+app.include_router(ai_ner_routes.router, prefix="/ai/ner", tags=["AI NER Extraction"])
+app.include_router(ai_pii_routes.router, prefix="/ai/pii", tags=["AI PII Detection"])
+app.include_router(ai_embeddings_routes.router, prefix="/ai/embeddings", tags=["AI Embeddings"])
 
 
 if __name__ == "__main__":

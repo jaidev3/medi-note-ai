@@ -1,5 +1,5 @@
 """
-NER (Named Entity Recognition) Service for AI Microservice
+NER (Named Entity Recognition) Service
 Implements biomedical entity extraction using Google Gemini
 """
 import os
@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 import structlog
 import google.generativeai as genai
 
-from schemas.ner_schemas import NEROutput, Entity, NERRequest
+from app.schemas.ner_schemas import NEROutput, Entity, NERRequest
 
 logger = structlog.get_logger(__name__)
 
@@ -25,8 +25,8 @@ class NERService:
     def _initialize_model(self):
         """Initialize the Gemini model for NER."""
         try:
-            gemini_model = os.getenv("AI_SERVICE_GEMINI_MODEL", "gemini-1.5-flash")
-            google_api_key = os.getenv("AI_SERVICE_GOOGLE_API_KEY")
+            gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            google_api_key = os.getenv("GOOGLE_API_KEY")
             
             logger.info("Initializing Gemini for NER", model=gemini_model)
             

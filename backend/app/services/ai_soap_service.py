@@ -1,6 +1,6 @@
 """
-AI-powered SOAP Generation Service (Backend Wrapper)
-Wrapper service that delegates AI operations to the AI microservice
+AI-powered SOAP Generation Service
+Direct AI-powered SOAP note generation using integrated AI services
 """
 import uuid
 import time
@@ -11,7 +11,10 @@ import structlog
 from app.schemas.soap_schemas import (
     SOAPGenerationRequest, SOAPGenerationResponse, SOAPNote
 )
-from app.clients.ai_service_client import ai_service_client
+from app.services.ai.soap_service import SOAPGenerationService
+from app.services.ai.ner_service import NERService
+from app.services.ai.pii_service import PIIService
+from app.services.ai.rag_service import RAGService
 from app.models.session_soap_notes import SessionSoapNotes
 from app.models.uploaded_documents import UploadedDocuments
 from app.database.db import async_session_maker
@@ -20,11 +23,14 @@ logger = structlog.get_logger(__name__)
 
 
 class AISOAPService:
-    """Wrapper service for AI-powered SOAP note generation using microservice."""
+    """Service for AI-powered SOAP note generation using integrated AI services."""
     
     def __init__(self):
-        """Initialize AI SOAP service."""
-        self.ai_client = ai_service_client
+        """Initialize AI SOAP service with direct AI service integration."""
+        self.soap_service = SOAPGenerationService()
+        self.ner_service = NERService()
+        self.pii_service = PIIService()
+        self.rag_service = RAGService()
     
     def _clean_for_json_serialization(self, data: Any) -> Any:
         """
@@ -163,8 +169,8 @@ class AISOAPService:
                     try:
                         logger.info("🤖 AI approved SOAP note, triggering RAG embedding pipeline", note_id=str(note_id))
                         
-                        # Generate embedding using AI service
-                        embedding = await self.ai_client.generate_soap_content_embedding(cleaned_content)
+                        # Generate embedding using integrated RAG service
+                        embedding = await self.rag_service.embed_soap_note_content(cleaned_content)
                         
                         if embedding:
                             # Update the note with embedding
@@ -188,7 +194,7 @@ class AISOAPService:
     
     async def generate_soap_note(self, request: SOAPGenerationRequest) -> SOAPGenerationResponse:
         """
-        Generate SOAP note using AI microservice.
+        Generate SOAP note using integrated AI services.
         
         Args:
             request: SOAP generation request
@@ -200,14 +206,57 @@ class AISOAPService:
         
         try:
             logger.info(
-                "Starting SOAP note generation via AI service",
+                "Starting SOAP note generation with integrated AI services",
                 session_id=str(request.session_id),
                 document_id=str(request.document_id) if request.document_id else None,
                 text_length=len(request.text)
             )
             
-            # Call AI service for SOAP generation
-            ai_response = await self.ai_client.generate_soap_note(request)
+            # Step 1: Apply PII masking if enabled
+            processed_text = request.text
+            pii_masked = False
+            pii_entities_found = 0
+            
+            if request.enable_pii_masking:
+                logger.info("🔒 Applying PII masking")
+                from app.schemas.pii_schemas import PIIAnonymizationRequest
+                
+                pii_request = PIIAnonymizationRequest(
+                    text=request.text,
+                    preserve_medical_context=request.preserve_medical_context,
+                    score_threshold=0.5
+                )
+                
+                pii_response = await self.pii_service.anonymize_text(pii_request)
+                
+                if pii_response.success:
+                    processed_text = pii_response.anonymized_text
+                    pii_masked = pii_response.has_pii
+                    pii_entities_found = pii_response.entities_count
+                    
+                    if pii_masked:
+                        logger.info("✅ PII masking completed", entities_masked=pii_entities_found)
+                else:
+                    logger.warning("PII masking failed, using original text", error=pii_response.message)
+            
+            # Step 2: Extract NER context data if requested
+            context_data = None
+            if request.include_context:
+                logger.info("🔍 Extracting NER context")
+                context_data = await self.ner_service.extract_context_data(processed_text)
+                logger.info("✅ NER context extracted", entity_count=context_data.get("total_entities", 0))
+            
+            # Step 3: Generate SOAP note
+            logger.info("🤖 Generating SOAP note")
+            ai_response = await self.soap_service.generate_soap_note(
+                request=request,
+                context_data=context_data,
+                pii_masked_text=processed_text if pii_masked else None
+            )
+            
+            # Update PII metadata in response
+            ai_response.pii_masked = pii_masked
+            ai_response.pii_entities_found = pii_entities_found
             
             # If AI service generated a valid SOAP note, save it to database
             note_id = None
@@ -234,7 +283,7 @@ class AISOAPService:
             processing_time = time.time() - start_time
             ai_response.processing_time = processing_time
             
-            logger.info("✅ SOAP note generation completed via AI service", 
+            logger.info("✅ SOAP note generation completed", 
                        success=ai_response.success,
                        ai_approved=ai_response.ai_approved,
                        processing_time=processing_time)
