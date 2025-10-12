@@ -41,19 +41,3 @@ class PaginationParams:
 
 # Pagination dependency
 PaginationDep = Annotated[PaginationParams, Depends(PaginationParams)]
-
-
-# TODO: Add authentication dependencies when implemented
-# async def get_current_user(
-#     db: DatabaseSession,
-#     token: str = Depends(oauth2_scheme)
-# ) -> User:
-#     """Get current authenticated user."""
-#     pass
-
-# TODO: Add role-based access dependencies
-# async def require_professional_role(
-#     current_user: User = Depends(get_current_user)
-# ) -> User:
-#     """Require professional role for access."""
-#     pass

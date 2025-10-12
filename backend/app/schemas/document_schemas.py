@@ -29,7 +29,7 @@ class DocumentUploadResponse(BaseModel):
     document_name: str = Field(default="", description="Original document filename")
     file_size: int = Field(default=0, description="File size in bytes")
     file_type: str = Field(default="", description="File type/extension")
-    s3_url: Optional[str] = Field(default=None, description="S3 storage URL")
+    file_path: Optional[str] = Field(default=None, description="Local file storage path")
     
     # Processing results
     text_extracted: bool = Field(default=False, description="Whether text was extracted")
@@ -100,7 +100,7 @@ class DocumentMetadataResponse(BaseModel):
     file_type: str = Field(..., description="File type")
     
     # Storage information
-    s3_upload_link: str = Field(..., description="S3 storage URL")
+    file_path: str = Field(..., description="Local file storage path")
     upload_status: str = Field(..., description="Upload status (pending, completed, failed)")
     
     # Processing status
@@ -126,7 +126,7 @@ class DocumentListResponse(BaseModel):
 class DocumentDeleteRequest(BaseModel):
     """Request schema for document deletion."""
     document_id: uuid.UUID = Field(..., description="Document ID to delete")
-    delete_from_s3: bool = Field(default=True, description="Whether to delete from S3 storage")
+    delete_file: bool = Field(default=True, description="Whether to delete the physical file")
     reason: Optional[str] = Field(default=None, description="Reason for deletion")
 
 
@@ -134,7 +134,7 @@ class DocumentDeleteResponse(BaseModel):
     """Response schema for document deletion."""
     success: bool = Field(..., description="Whether deletion was successful")
     document_id: uuid.UUID = Field(..., description="Deleted document ID")
-    s3_deleted: bool = Field(default=False, description="Whether file was deleted from S3")
+    file_deleted: bool = Field(default=False, description="Whether physical file was deleted")
     
     message: str = Field(default="", description="Status message")
 

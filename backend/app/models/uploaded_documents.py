@@ -39,7 +39,7 @@ class UploadedDocuments(Base):
         server_default=func.now(),
         nullable=False,
     )
-    s3_upload_link = Column(Text, nullable=False)
+    file_path = Column(Text, nullable=False)
     document_name = Column(String(200), nullable=False)
     
     # Text extraction fields (added in migration ccc65f2dcc7f)

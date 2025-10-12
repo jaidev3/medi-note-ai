@@ -36,21 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager for startup and shutdown events."""
     # Startup
     logger.info("🚀 Starting Echo Notes Backend...")
-    
-    # TODO: Initialize database connection
-    # TODO: Initialize vector database (pgvector)
-    # TODO: Load AI models
-    # TODO: Setup background tasks
-    
+
     logger.info("✅ Echo Notes Backend started successfully")
     
     yield
     
     # Shutdown
     logger.info("🛑 Shutting down Echo Notes Backend...")
-    
-    # TODO: Close database connections
-    # TODO: Cleanup resources
     
     logger.info("✅ Echo Notes Backend shutdown complete")
 
@@ -144,18 +136,18 @@ from app.routes import (
 
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(user_routes.router, prefix="/users", tags=["Users"])
-app.include_router(patient_routes.router, prefix="/patients", tags=["Patients"])
-app.include_router(session_routes.router, prefix="/sessions", tags=["Sessions"])
-app.include_router(document_routes.router, prefix="/documents", tags=["Documents"])
-app.include_router(soap_routes.router, prefix="/soap", tags=["SOAP Notes"])
-app.include_router(rag_routes.router, prefix="/rag", tags=["RAG Queries"])
-app.include_router(professional_routes.router, prefix="/professionals", tags=["Professionals"])
+# app.include_router(patient_routes.router, prefix="/patients", tags=["Patients"])
+# app.include_router(session_routes.router, prefix="/sessions", tags=["Sessions"])
+# app.include_router(document_routes.router, prefix="/documents", tags=["Documents"])
+# app.include_router(soap_routes.router, prefix="/soap", tags=["SOAP Notes"])
+# app.include_router(rag_routes.router, prefix="/rag", tags=["RAG Queries"])
+# app.include_router(professional_routes.router, prefix="/professionals", tags=["Professionals"])
 
-# AI Service Routes (Direct Integration)
-app.include_router(ai_soap_routes.router, prefix="/ai/soap", tags=["AI SOAP Generation"])
-app.include_router(ai_ner_routes.router, prefix="/ai/ner", tags=["AI NER Extraction"])
-app.include_router(ai_pii_routes.router, prefix="/ai/pii", tags=["AI PII Detection"])
-app.include_router(ai_embeddings_routes.router, prefix="/ai/embeddings", tags=["AI Embeddings"])
+# # AI Service Routes (Direct Integration)
+# app.include_router(ai_soap_routes.router, prefix="/ai/soap", tags=["AI SOAP Generation"])
+# app.include_router(ai_ner_routes.router, prefix="/ai/ner", tags=["AI NER Extraction"])
+# app.include_router(ai_pii_routes.router, prefix="/ai/pii", tags=["AI PII Detection"])
+# app.include_router(ai_embeddings_routes.router, prefix="/ai/embeddings", tags=["AI Embeddings"])
 
 
 if __name__ == "__main__":

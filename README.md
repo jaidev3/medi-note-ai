@@ -19,7 +19,7 @@ Echo Notes revolutionizes healthcare documentation by using advanced AI to autom
 - 🤖 **AI-Powered SOAP Generation** - Automated medical note creation using LLaMA 3 and GPT-4
 - 🔒 **PII Protection** - Advanced privacy-preserving text processing with Microsoft Presidio
 - 🔍 **RAG-based Queries** - Intelligent patient data retrieval using vector embeddings
-- 📄 **Document Management** - Secure file storage and processing with AWS S3
+- 📄 **Document Management** - Secure local file storage and processing
 - 📊 **Real-time Monitoring** - Comprehensive service health and performance tracking
 - 🌐 **Modern UI/UX** - Responsive Next.js interface with Tailwind CSS
 
@@ -49,7 +49,7 @@ Echo Notes follows a **microservice architecture** with clear separation between
 │           ▲                      ▲                 ▲        │
 │           │                      │                 │        │
 │  ┌────────▼────┐        ┌────────▼─────┐     ┌─────▼──────┐ │
-│  │ Next.js     │        │   AWS S3     │     │  Model     │ │
+│  │ Next.js     │        │    Local     │     │  Model     │ │
 │  │ Frontend    │        │  Document    │     │  Cache     │ │
 │  │ (Port 3000) │        │   Storage    │     │  Volume    │ │
 │  └─────────────┘        └──────────────┘     └────────────┘ │
@@ -78,8 +78,8 @@ Echo Notes follows a **microservice architecture** with clear separation between
 │  │    Services     │ │     Clients     │ │
 │  │                 │ │                 │ │
 │  │ • AuthService   │ │ • AIServiceClient│ │
-│  │ • AISoapService │ │ • S3Client      │ │
-│  │ • UserService   │ │ • EmailClient   │ │
+│  │ • AISoapService │ │ • EmailClient   │ │
+│  │ • UserService   │ │                 │ │
 │  │ • PDFService    │ │                 │ │
 │  └─────────────────┘ └─────────────────┘ │
 └─────────────────────────────────────────┘

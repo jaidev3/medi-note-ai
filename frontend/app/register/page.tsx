@@ -1,64 +1,73 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loading } from '@/components/ui/loading'
-import { authApi, RegisterRequest } from '@/routes'
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Loading } from "@/components/ui/loading";
+import { authApi, RegisterRequest } from "@/routes";
 
-const PROFESSIONAL_ROLES = [
-  'Audiologists',
-  'Speech-Language Pathologists',
-  'Hearing Aid Specialists',
-  'ENT Doctors',
-  'Administrators'
-] as const
+// Map of backend enum values -> user-friendly labels
+const PROFESSIONAL_ROLES: { value: string; label: string }[] = [
+  { value: "AUDIOLOGISTS", label: "Audiologists" },
+  { value: "HEARING_AID_SPECIALISTS", label: "Hearing Aid Specialists" },
+  { value: "ENT_PHYSICIANS", label: "ENT Physicians" },
+  { value: "CLINICAL_SUPPORT_STAFF", label: "Clinical Support Staff" },
+];
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState<RegisterRequest>({
-    name: '',
-    email: '',
-    password: '',
-    role: 'Audiologists',
-    department: '',
-    employee_id: '',
-    phone_number: '',
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
+    name: "",
+    email: "",
+    password: "",
+    // default to backend enum for Audiologists
+    role: "AUDIOLOGISTS",
+    department: "",
+    employee_id: "",
+    phone_number: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      await authApi.register(formData)
-      
+      await authApi.register(formData);
+
       // Account created successfully! Redirecting to login...
-      
+
       // Redirect to login page after successful registration
-      router.push('/login?message=Registration successful. Please log in.')
+      router.push("/login?message=Registration successful. Please log in.");
     } catch (err: any) {
-      const errorMessage = err.message || 'Registration failed'
-      setError(errorMessage)
+      const errorMessage = err.message || "Registration failed";
+      setError(errorMessage);
       // Error: ${errorMessage}
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+      [e.target.name]: e.target.value,
+    }));
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -84,9 +93,12 @@ export default function RegisterPage() {
                   {error}
                 </div>
               )}
-              
+
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Full Name *
                 </label>
                 <Input
@@ -101,7 +113,10 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Email Address *
                 </label>
                 <Input
@@ -117,7 +132,10 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Password *
                 </label>
                 <Input
@@ -134,7 +152,10 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="role"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Professional Role *
                 </label>
                 <select
@@ -145,14 +166,19 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {PROFESSIONAL_ROLES.map(role => (
-                    <option key={role} value={role}>{role}</option>
+                  {PROFESSIONAL_ROLES.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="department"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Department
                 </label>
                 <Input
@@ -166,7 +192,10 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="employee_id" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="employee_id"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Employee ID
                 </label>
                 <Input
@@ -180,7 +209,10 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="phone_number"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Phone Number
                 </label>
                 <Input
@@ -204,14 +236,14 @@ export default function RegisterPage() {
                     Creating account...
                   </>
                 ) : (
-                  'Create Account'
+                  "Create Account"
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <Link
                   href="/login"
                   className="font-medium text-blue-600 hover:text-blue-500 hover:underline"
@@ -224,5 +256,5 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -2,6 +2,7 @@
 Document Management Controller
 Handles document upload, processing, and retrieval business logic
 """
+import os
 import uuid
 from typing import Optional
 import structlog
@@ -159,14 +160,24 @@ class DocumentController:
                         detail="Document not found"
                     )
                 
+                # Get file size from file system
+                file_size = 0
+                if os.path.exists(document.file_path):
+                    file_size = os.path.getsize(document.file_path)
+                
+                # Extract file type from filename
+                file_type = ""
+                if document.document_name and "." in document.document_name:
+                    file_type = document.document_name.split(".")[-1].lower()
+                
                 # Convert to response schema
                 return DocumentMetadataResponse(
                     document_id=document.document_id,
                     session_id=document.session_id,
                     document_name=document.document_name,
-                    file_size=0,  # Not stored in database
-                    file_type="",  # Not stored in database
-                    s3_upload_link=document.s3_upload_link,
+                    file_size=file_size,
+                    file_type=file_type,
+                    file_path=document.file_path,
                     upload_status="completed" if document.text_extracted else "pending",
                     processed=document.text_extracted,
                     text_extracted=document.text_extracted,

@@ -1,6 +1,6 @@
 """
 Document Management Service
-Implements file upload, S3 integration, and document processing
+Implements file upload, local storage, and document processing
 """
 import uuid
 import time
@@ -10,9 +10,8 @@ from typing import Optional, Dict, Any, List
 import structlog
 import io
 from datetime import datetime
+from pathlib import Path
 
-import boto3
-from botocore.exceptions import ClientError, NoCredentialsError
 import PyPDF2
 from docx import Document as DocxDocument
 from sqlalchemy import select, and_
@@ -40,16 +39,16 @@ class DocumentService:
     """Service for document management and processing."""
     
     def __init__(self):
-        """Initialize document service with S3 client."""
+        """Initialize document service with local storage."""
         try:
-            self.s3_client = None
             self.soap_service = SOAPGenerationService()
             
             # Initialize PII service with retry logic
             self.pii_service = None
             self._initialize_pii_service()
             
-            self._initialize_s3()
+            # Initialize local storage directory
+            self._initialize_local_storage()
             
         except Exception as e:
             logger.error("Failed to initialize DocumentService", error=str(e))
@@ -104,29 +103,28 @@ class DocumentService:
         else:
             logger.info("🔍 jaidev: PII service initialization completed successfully")
     
-    def _initialize_s3(self):
-        """Initialize S3 client for document storage."""
+    def _initialize_local_storage(self):
+        """Initialize local storage directory for documents."""
         try:
-            aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.getenv("AWS_REGION", "us-east-1")
-            s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+            # Get the base directory for document storage
+            base_dir = os.getenv("DOCUMENTS_STORAGE_PATH", "app/data/documents")
             
-            if aws_access_key_id and aws_secret_access_key:
-                self.s3_client = boto3.client(
-                    's3',
-                    aws_access_key_id=aws_access_key_id,
-                    aws_secret_access_key=aws_secret_access_key,
-                    region_name=aws_region,
-                    endpoint_url=s3_endpoint_url
-                )
-                logger.info("✅ S3 client initialized successfully")
-            else:
-                logger.warning("⚠️ S3 credentials not provided, using local storage")
-                
+            # Create absolute path
+            if not os.path.isabs(base_dir):
+                # Get the backend directory (parent of app)
+                backend_dir = Path(__file__).parent.parent.parent
+                base_dir = os.path.join(backend_dir, base_dir)
+            
+            self.storage_path = Path(base_dir)
+            
+            # Create directory if it doesn't exist
+            self.storage_path.mkdir(parents=True, exist_ok=True)
+            
+            logger.info("✅ Local storage initialized successfully", storage_path=str(self.storage_path))
+            
         except Exception as e:
-            logger.error("❌ Failed to initialize S3 client", error=str(e))
-            self.s3_client = None
+            logger.error("❌ Failed to initialize local storage", error=str(e))
+            raise
     
     def _validate_upload_file(self, file: UploadFile) -> FileValidationResult:
         """
@@ -242,7 +240,7 @@ class DocumentService:
         file: UploadFile
     ) -> DocumentUploadResponse:
         """
-        Upload document file directly to S3 and process.
+        Upload document file directly to local storage and process.
         
         Args:
             request: Document upload request
@@ -284,53 +282,34 @@ class DocumentService:
                         message="Session not found"
                     )
             
-            # Generate document ID and S3 key
+            # Generate document ID and file path
             document_id = uuid.uuid4()
-            s3_bucket_name = os.getenv("S3_BUCKET_NAME", "echo-notes-documents")
-            s3_key = f"documents/{request.session_id}/{document_id}_{file.filename}"
+            
+            # Create session-specific directory
+            session_dir = self.storage_path / str(request.session_id)
+            session_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate unique filename
+            filename = file.filename or f"document_{document_id}"
+            file_path = session_dir / f"{document_id}_{filename}"
             
             # Read file content
             file_content = await file.read()
             upload_time = time.time() - start_time
             
-            # Upload to S3
-            s3_url = None
-            
-            if self.s3_client is None:
-                logger.error("S3 client not available, skipping upload")
+            # Save to local storage
+            try:
+                with open(file_path, 'wb') as f:
+                    f.write(file_content)
+                
+                logger.info("✅ File saved to local storage", document_id=str(document_id), file_path=str(file_path))
+                
+            except Exception as e:
+                logger.error("❌ Failed to save file to local storage", error=str(e))
                 return DocumentUploadResponse(
                     success=False,
-                    message="S3 client not available"
+                    message=f"Failed to save file to storage: {str(e)}"
                 )
-            
-            if self.s3_client:
-                try:
-                    # Upload file to S3
-                    self.s3_client.put_object(
-                        Bucket=s3_bucket_name,
-                        Key=s3_key,
-                        Body=file_content,
-                        ContentType=file.content_type or f"application/{validation.file_type}",
-                        Metadata={
-                            'original-filename': file.filename or 'unknown',
-                            'session-id': str(request.session_id),
-                            'document-id': str(document_id),
-                            'upload-source': request.upload_source
-                        }
-                    )
-                    
-                    s3_url = f"s3://{s3_bucket_name}/{s3_key}"
-                    logger.info("✅ File uploaded to S3", document_id=str(document_id), s3_key=s3_key)
-                    
-                except ClientError as e:
-                    logger.error("❌ Failed to upload to S3", error=str(e))
-                    return DocumentUploadResponse(
-                        success=False,
-                        message=f"Failed to upload file to storage: {str(e)}"
-                    )
-            else:
-                logger.warning("⚠️ S3 client not available, simulating upload")
-                s3_url = f"s3://{s3_bucket_name}/{s3_key}"
             
             # Create database record
             async with async_session_maker() as session:
@@ -338,7 +317,7 @@ class DocumentService:
                     document_id=document_id,
                     session_id=request.session_id,
                     document_name=file.filename or 'unknown',
-                    s3_upload_link=s3_url
+                    file_path=str(file_path)
                 )
                 
                 session.add(document)
@@ -503,7 +482,7 @@ class DocumentService:
                 document_name=file.filename or 'unknown',
                 file_size=validation.file_size,
                 file_type=validation.file_type,
-                s3_url=s3_url,
+                file_path=str(file_path),
                 text_extracted=text_extracted,
                 extracted_text=extracted_text if request.extract_text else None,
                 word_count=word_count,
@@ -1191,13 +1170,23 @@ class DocumentService:
                 if not document:
                     return None
                 
+                # Get file size from file system
+                file_size = 0
+                if os.path.exists(document.file_path):
+                    file_size = os.path.getsize(document.file_path)
+                
+                # Extract file type from filename
+                file_type = "unknown"
+                if document.document_name and "." in document.document_name:
+                    file_type = document.document_name.split(".")[-1].lower()
+                
                 return DocumentMetadataResponse(
                     document_id=document.document_id,
                     session_id=document.session_id,
                     document_name=document.document_name,
-                    file_size=0,  # TODO: Get actual file size from S3
-                    file_type="unknown",  # TODO: Extract from filename
-                    s3_upload_link=document.s3_upload_link,
+                    file_size=file_size,
+                    file_type=file_type,
+                    file_path=document.file_path,
                     upload_status=document.processing_status or "pending",
                     processed=document.text_extracted,
                     text_extracted=document.text_extracted,
@@ -1246,13 +1235,23 @@ class DocumentService:
                 # Convert to response objects
                 document_responses = []
                 for doc in documents:
+                    # Get file size from file system
+                    file_size = 0
+                    if os.path.exists(doc.file_path):
+                        file_size = os.path.getsize(doc.file_path)
+                    
+                    # Extract file type from filename
+                    file_type = "unknown"
+                    if doc.document_name and "." in doc.document_name:
+                        file_type = doc.document_name.split(".")[-1].lower()
+                    
                     doc_response = DocumentMetadataResponse(
                         document_id=doc.document_id,
                         session_id=doc.session_id,
                         document_name=doc.document_name,
-                        file_size=0,  # TODO: Get actual file size from S3
-                        file_type="unknown",  # TODO: Extract from filename
-                        s3_upload_link=doc.s3_upload_link,
+                        file_size=file_size,
+                        file_type=file_type,
+                        file_path=doc.file_path,
                         upload_status=doc.processing_status or "pending",
                         processed=doc.text_extracted,
                         text_extracted=doc.text_extracted,
