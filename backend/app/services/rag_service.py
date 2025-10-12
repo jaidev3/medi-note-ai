@@ -15,10 +15,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_core.prompts import PromptTemplate
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from sqlalchemy import select, text, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from pgvector.sqlalchemy import Vector
+
+from app.services.ai_provider_utils import get_chat_model, get_embedding_model
 
 from app.schemas.rag_schemas import (
     RAGQueryRequest, RAGQueryResponse, RAGChunk,
@@ -41,33 +42,27 @@ class RAGService:
         self.embeddings = None
         self.llm = None
         self.rag_prompt = None
+        self.provider = None  # Track which provider is being used
         self._initialize_models()
         self._setup_prompts()
     
     def _initialize_models(self):
-        """Initialize embedding and generation models."""
+        """Initialize embedding and generation models with OpenAI or Google Gemini fallback."""
         try:
             logger.info("Initializing RAG models")
             
-            openai_api_key = os.getenv("OPENAI_API_KEY", "")
-            openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
             temperature = float(os.getenv("TEMPERATURE", "0.1"))
             
-            # Initialize OpenAI embeddings
-            self.embeddings = OpenAIEmbeddings(
-                model=openai_embedding_model,
-                api_key=openai_api_key
-            )
+            # Initialize embeddings with automatic provider fallback
+            self.embeddings, embedding_provider = get_embedding_model()
             
-            # Initialize LLM for answer generation
-            self.llm = ChatOpenAI(
-                model=openai_model,
-                temperature=temperature,
-                api_key=openai_api_key
-            )
+            # Initialize LLM with automatic provider fallback
+            self.llm, llm_provider = get_chat_model(temperature=temperature)
             
-            logger.info("✅ RAG models initialized successfully")
+            # Track the provider
+            self.provider = embedding_provider  # Both should be the same provider
+            
+            logger.info(f"✅ RAG models initialized successfully with {self.provider.upper()}")
             
         except Exception as e:
             logger.error("❌ Failed to initialize RAG models", error=str(e))

@@ -14,11 +14,9 @@ import structlog
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnableLambda
-from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# For HuggingFace Inference API
-from huggingface_hub import InferenceClient
+from app.services.ai_provider_utils import get_chat_model
 
 from app.schemas.soap_schemas import (
     SOAPNote, SOAPSection, SOAPGenerationRequest, 
@@ -44,9 +42,10 @@ class SOAPGenerationService:
         self.rag_service = RAGService()
         self.pii_service = PIIService()
         self.soap_model = None
-        self.hf_client = None
         self.soap_chain = None
+        self.judge_model = None
         self.judge_chain = None
+        self.provider = None  # Track which provider is being used (both models use same provider)
         self._initialize_models()
         self._setup_prompts()
     
@@ -162,59 +161,6 @@ class SOAPGenerationService:
             }
         }
     
-    def _create_hf_inference_function(self, model_id: str, api_token: str):
-        """
-        Create HuggingFace Inference API function using InferenceClient.
-        
-        Args:
-            model_id: HuggingFace model ID
-            api_token: HuggingFace API token
-            
-        Returns:
-            Function that can be used with RunnableLambda
-        """
-        client = InferenceClient(model=model_id, token=api_token)
-        
-        def inference_function(prompt: str) -> str:
-            """Call HuggingFace Inference API with proper chat template."""
-            try:
-                # Create messages in the format expected by the model
-                messages = [
-                    {
-                        "role": "system", 
-                        "content": "You are an expert medical professional specializing in audiology and hearing care with extensive medical knowledge and practical experience. Generate structured SOAP notes from clinical information using proper medical terminology."
-                    },
-                    {
-                        "role": "user", 
-                        "content": prompt
-                    }
-                ]
-                
-                # Use chat completion with proper parameters
-                response = client.chat_completion(
-                    messages=messages,
-                    max_tokens=1024,
-                    temperature=0.2,
-                    top_p=0.95,
-                    stop=["<|eot_id|>"]
-                )
-                
-                # Extract the generated text
-                if response and response.choices and len(response.choices) > 0:
-                    generated_text = response.choices[0].message.content
-                    logger.info("✅ HuggingFace Inference API successful", response_length=len(generated_text))
-                    return generated_text
-                else:
-                    logger.warning("⚠️ Empty response from HuggingFace Inference API")
-                    return ""
-                    
-            except Exception as e:
-                logger.error("❌ HuggingFace Inference API call failed", error=str(e), error_type=type(e).__name__)
-                # Return empty string to trigger fallback parsing
-                return ""
-        
-        return inference_function
-    
     def _clean_for_json_serialization(self, data: Any) -> Any:
         """
         Clean data to ensure JSON serialization compatibility.
@@ -299,37 +245,22 @@ class SOAPGenerationService:
             return text, False, 0
     
     def _initialize_models(self):
-        """Initialize models: HuggingFace for SOAP generation, OpenAI for Judge."""
+        """Initialize models: OpenAI/Google Gemini for both SOAP generation and Judge."""
         try:
-            logger.info("Initializing models for SOAP generation (HF) and Judge (OpenAI)")
+            logger.info("Initializing models for SOAP generation and Judge (OpenAI/Gemini)")
 
-            # HuggingFace for SOAP generation - using biomedical model via Inference API
-            hf_model_id = os.getenv("HUGGINGFACE_MODEL_ID", "aaditya/Llama3-OpenBioLLM-70B").strip()
-            hf_api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN", "").strip()
+            # SOAP Generation Model: Initialize with automatic OpenAI/Google Gemini fallback
+            # Use higher temperature for more creative SOAP note generation
+            self.soap_model, soap_provider = get_chat_model(temperature=0.3)
             
-            # Ensure we have the API token
-            if not hf_api_token:
-                logger.error("❌ HUGGINGFACEHUB_API_TOKEN is required for model access")
-                raise RuntimeError("HuggingFace API token is required")
-
-            logger.info(f"🔧 Initializing HuggingFace Inference API for model: {hf_model_id}")
+            # Judge LLM: Initialize with automatic OpenAI/Google Gemini fallback
+            # Use lower temperature for more consistent validation
+            self.judge_model, judge_provider = get_chat_model(temperature=0.1)
             
-            # Create the inference function using HuggingFace Inference API
-            hf_inference_func = self._create_hf_inference_function(hf_model_id, hf_api_token)
+            # Track the provider (both should use the same provider)
+            self.provider = soap_provider
             
-            # Wrap the inference function in a RunnableLambda
-            self.soap_model = RunnableLambda(hf_inference_func)
-
-            # OpenAI for Judge LLM
-            openai_api_key = os.getenv("OPENAI_API_KEY", "")
-            openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            self.judge_model = ChatOpenAI(
-                model=openai_model,
-                temperature=0.1,
-                api_key=openai_api_key,
-            )
-
-            logger.info("✅ Models initialized: SOAP via HuggingFace, Judge via OpenAI")
+            logger.info(f"✅ Models initialized: SOAP and Judge via {self.provider.upper()}")
             
         except Exception as e:
             logger.error("❌ Failed to initialize models", error=str(e))
@@ -380,6 +311,56 @@ Requirements:
             input_variables=["text", "context_data"],
             template=soap_prompt_template
         )
+        
+    def _setup_prompts(self):
+        """Setup SOAP generation and judge prompts for chat models."""
+        
+        # SOAP Note Generation Prompt - Using ChatPromptTemplate for chat models
+        soap_system_prompt = """You are an expert medical professional specializing in audiology and hearing care with extensive medical knowledge and practical experience. Your task is to generate structured SOAP notes from clinical information using proper medical terminology.
+
+You must return ONLY a valid JSON object with the following exact structure (no additional text):
+{{
+    "subjective": {{
+        "content": "Patient's reported symptoms, concerns, and subjective experiences",
+        "confidence": 0.95,
+        "word_count": 50
+    }},
+    "objective": {{
+        "content": "Clinical findings, test results, and objective observations",
+        "confidence": 0.90,
+        "word_count": 75
+    }},
+    "assessment": {{
+        "content": "Clinical interpretation, diagnosis, and professional assessment",
+        "confidence": 0.85,
+        "word_count": 40
+    }},
+    "plan": {{
+        "content": "Treatment recommendations, follow-up plans, and next steps",
+        "confidence": 0.88,
+        "word_count": 60
+    }}
+}}
+
+Requirements:
+- Use proper audiological and medical terminology
+- Include specific measurements and test results where available
+- Maintain professional medical language
+- Be clinically accurate and specific
+- Return ONLY the JSON structure, no additional text or explanations"""
+        
+        soap_human_prompt = """Generate a SOAP note from the following clinical information:
+
+Clinical Text: {text}
+
+Extracted Medical Entities: {context_data}
+
+Generate the SOAP note in JSON format:"""
+        
+        self.soap_prompt = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template(soap_system_prompt),
+            HumanMessagePromptTemplate.from_template(soap_human_prompt)
+        ])
         
         # Judge LLM System Prompt with few-shot examples
         judge_system_prompt = """You are a medical compliance judge specializing in hearing care documentation. Review SOAP notes for completeness, accuracy, and compliance with medical documentation standards.
@@ -433,25 +414,13 @@ Provide your assessment:"""
         self.judge_parser = JsonOutputParser(pydantic_object=JudgeLLMResponse)
         
         # Create custom SOAP parser using RunnableLambda
-        self.soap_parser = RunnableLambda(lambda x: self._extract_json_from_text(x))
+        self.soap_parser = RunnableLambda(lambda x: self._extract_json_from_text(x.content if hasattr(x, 'content') else str(x)))
         
         # Create chains
         if self.soap_model and self.judge_model:
-            print("jaidev","reached soap chain")
-            
-            # Test the HuggingFace model first
-            try:
-                logger.info("🧪 Testing HuggingFace Inference API connectivity...")
-                test_prompt = "Hello, respond with 'Test successful'"
-                test_response = self.soap_model.invoke(test_prompt)
-                logger.info("✅ HuggingFace Inference API test successful", test_response_type=type(test_response).__name__, response_preview=str(test_response)[:100])
-            except Exception as e:
-                logger.error("❌ HuggingFace Inference API test failed", error=str(e), error_type=type(e).__name__)
-                # Continue anyway, but log the issue
-            
             self.soap_chain = self.soap_prompt | self.soap_model | self.soap_parser
             self.judge_chain = self.judge_prompt | self.judge_model | self.judge_parser
-            logger.info("✅ SOAP (HF) and Judge (OpenAI) chains constructed successfully")
+            logger.info(f"✅ SOAP and Judge chains constructed successfully using {self.provider.upper()}")
         else:
             logger.error("❌ Cannot create chains - missing models", soap_model=bool(self.soap_model), judge_model=bool(self.judge_model))
     
@@ -545,58 +514,21 @@ Provide your assessment:"""
             while regeneration_count <= max_regenerations:
                 try:
                     logger.info(f"🔄 SOAP generation attempt {regeneration_count + 1}/{max_regenerations + 1}")
-                    print("jaidev","reached retry logic")
                     
-                    # Step-by-step chain execution for debugging
+                    # Prepare chain input
                     chain_input = {
                         "text": processed_text,  # Use processed text (potentially PII-masked)
                         "context_data": json.dumps(context_data, indent=2) if context_data else "{}"
                     }
                     
-                    logger.info("🔍 Executing SOAP chain step by step for debugging")
+                    logger.info("🔍 Executing SOAP chain")
                     
-                    # Step 1: Format prompt
-                    try:
-                        formatted_prompt = self.soap_prompt.format(**chain_input)
-                        logger.info("✅ Prompt formatted successfully", prompt_length=len(formatted_prompt))
-                    except Exception as e:
-                        logger.error("❌ Prompt formatting failed", error=str(e))
-                        raise
-                    
-                    # Step 2: Call HuggingFace model
-                    try:
-                        logger.info("🤖 Calling HuggingFace model...")
-                        model_response = self.soap_model.invoke(formatted_prompt)
-                        logger.info("✅ HuggingFace model responded", response_type=type(model_response).__name__, response_length=len(str(model_response)) if model_response else 0)
-                        
-                        # Log a preview of the response
-                        if model_response:
-                            response_preview = str(model_response)[:200]
-                            logger.info("📝 Model response preview", preview=response_preview)
-                        else:
-                            logger.warning("⚠️ Model returned empty response")
-                            
-                    except StopIteration as e:
-                        logger.error("❌ HuggingFace model StopIteration - likely empty response or connection issue", error=str(e))
-                        raise
-                        
-                    except Exception as e:
-                        logger.error("❌ HuggingFace model call failed", error=str(e), error_type=type(e).__name__)
-                        raise
-                    
-                    # Step 3: Parse JSON
-                    try:
-                        logger.info("🔍 Parsing model response as JSON...")
-                        soap_result = self._extract_json_from_text(str(model_response))
-                        logger.info("✅ JSON parsing successful", result_keys=list(soap_result.keys()) if isinstance(soap_result, dict) else "not_dict")
-                    except Exception as e:
-                        logger.error("❌ JSON parsing failed", error=str(e), error_type=type(e).__name__)
-                        raise
+                    # Execute the SOAP generation chain
+                    soap_result = self.soap_chain.invoke(chain_input)
                     
                     logger.info("✅ SOAP chain executed successfully", result_type=type(soap_result).__name__)
-                    print("jaidev","reached soap chain")
                     
-                    # Step 3: Validate with Judge LLM
+                    # Validate with Judge LLM
                     judge_result = await self._validate_with_judge(soap_result)
                     validation_feedback = judge_result.reason
                     

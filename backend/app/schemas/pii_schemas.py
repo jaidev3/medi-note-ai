@@ -49,3 +49,33 @@ class PIIAnalysisResponse(BaseModel):
     total_entities: int = Field(default=0, description="Total number of entities detected")
     has_pii: bool = Field(default=False, description="Whether any PII was detected")
     message: str = Field(default="", description="Status or error message")
+
+
+class PIIAnonymizationRequest(BaseModel):
+    """Request schema for PII anonymization."""
+    text: str = Field(..., description="Text to anonymize", min_length=1)
+    entities: Optional[List[str]] = Field(
+        default=None,
+        description="Specific entity types to anonymize (if None, uses clinical defaults)"
+    )
+    preserve_medical_context: bool = Field(
+        default=True,
+        description="Whether to preserve medical/clinical terminology while anonymizing PII"
+    )
+    score_threshold: float = Field(
+        default=0.5,
+        description="Minimum confidence score for entities to be anonymized",
+        ge=0.0,
+        le=1.0,
+    )
+
+
+class PIIAnonymizationResponse(BaseModel):
+    """Response schema for PII anonymization."""
+    success: bool = Field(..., description="Whether anonymization was successful")
+    original_text: str = Field(..., description="Original input text")
+    anonymized_text: str = Field(..., description="Anonymized output text")
+    entities_found: List[PIIEntity] = Field(default_factory=list, description="Detected/anonymized PII entities")
+    entities_count: int = Field(default=0, description="Number of entities anonymized")
+    has_pii: bool = Field(default=False, description="Whether any PII was detected/anonymized")
+    message: str = Field(default="", description="Status or error message")

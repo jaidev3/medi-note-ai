@@ -13,7 +13,6 @@ from app.schemas.soap_schemas import SOAPGenerationRequest, SOAPGenerationRespon
 from app.services.ai.soap_service import SOAPGenerationService
 from app.services.ai.ner_service import NERService
 from app.services.ai.pii_service import PIIService
-from app.database.dep import get_db
 
 logger = structlog.get_logger(__name__)
 
