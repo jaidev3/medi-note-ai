@@ -40,7 +40,9 @@ export const SOAPGeneratePage: React.FC = () => {
         "Generated SOAP note will appear here...\n\nSubjective:\n\nObjective:\n\nAssessment:\n\nPlan:"
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate SOAP note");
+      setError(
+        err instanceof Error ? err.message : "Failed to generate SOAP note"
+      );
     } finally {
       setLoading(false);
     }

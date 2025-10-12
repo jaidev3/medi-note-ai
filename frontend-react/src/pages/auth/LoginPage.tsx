@@ -42,7 +42,11 @@ export const LoginPage: React.FC = () => {
     try {
       await login(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }

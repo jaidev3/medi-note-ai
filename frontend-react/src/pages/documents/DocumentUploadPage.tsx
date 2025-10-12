@@ -53,7 +53,9 @@ export const DocumentUploadPage: React.FC = () => {
       setUploadedFiles([...uploadedFiles, result]);
       setSelectedFile(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      setError(
+        err instanceof Error ? err.message : "Upload failed. Please try again."
+      );
     } finally {
       setUploading(false);
     }

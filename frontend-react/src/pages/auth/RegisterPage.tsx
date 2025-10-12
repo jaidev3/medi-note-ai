@@ -53,7 +53,11 @@ export const RegisterPage: React.FC = () => {
     try {
       await register(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
