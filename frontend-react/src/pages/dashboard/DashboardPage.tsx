@@ -14,6 +14,7 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
+import Logo from "@/components/Logo";
 import {
   Description,
   People,
@@ -88,13 +89,18 @@ export const DashboardPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ flexGrow: 1, fontWeight: "bold" }}
-          >
-            MediNote AI
-          </Typography>
+          <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
+            <Box sx={{ mr: 2, display: "flex", alignItems: "center" }}>
+              <Logo width={36} height={36} aria-hidden={false} />
+            </Box>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontWeight: "bold" }}
+            >
+              MediNote AI
+            </Typography>
+          </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
             {user?.email}
           </Typography>

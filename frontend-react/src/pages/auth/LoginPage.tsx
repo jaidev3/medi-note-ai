@@ -13,6 +13,7 @@ import {
   InputAdornment,
   IconButton,
 } from "@mui/material";
+import Logo from "@/components/Logo";
 import {
   Visibility,
   VisibilityOff,
@@ -54,6 +55,9 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Container maxWidth="sm">
         <Box textAlign="center" mb={4}>
+          <Box display="flex" justifyContent="center" mb={1}>
+            <Logo width={64} height={64} aria-hidden={false} />
+          </Box>
           <Typography
             variant="h3"
             component="h1"

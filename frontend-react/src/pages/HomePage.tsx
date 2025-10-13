@@ -11,6 +11,7 @@ import {
   CardContent,
   Grid,
 } from "@mui/material";
+import Logo from "@/components/Logo";
 import {
   Description,
   Search,
@@ -85,13 +86,18 @@ export const HomePage: React.FC = () => {
       {/* Navbar */}
       <AppBar position="static" color="transparent" elevation={1}>
         <Toolbar>
-          <Typography
-            variant="h5"
-            component="div"
-            sx={{ flexGrow: 1, fontWeight: "bold" }}
-          >
-            MediNote AI
-          </Typography>
+          <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
+            <Box sx={{ mr: 2, display: "flex", alignItems: "center" }}>
+              <Logo width={40} height={40} aria-hidden={false} />
+            </Box>
+            <Typography
+              variant="h5"
+              component="div"
+              sx={{ fontWeight: "bold" }}
+            >
+              MediNote AI
+            </Typography>
+          </Box>
           <Box display="flex" gap={2}>
             <Button variant="outlined" onClick={() => navigate("/login")}>
               Login
