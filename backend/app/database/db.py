@@ -22,10 +22,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,  # Set to False in production
-    pool_size=20,
-    max_overflow=0,
-    pool_pre_ping=True,
-    pool_recycle=300,
+    # pool_size=20,
+    # max_overflow=0,
+    # pool_pre_ping=True,
+    # pool_recycle=300,
 )
 
 # Create async session maker

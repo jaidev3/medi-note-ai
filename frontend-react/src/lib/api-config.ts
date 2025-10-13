@@ -79,11 +79,47 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
 
     // Handle 401 Unauthorized - token expired or invalid
     if (response.status === 401) {
-      // Clear tokens and redirect to login
+      // Try to refresh token
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(
+            `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ refresh_token: refreshToken }),
+            }
+          );
+
+          if (refreshResponse.ok) {
+            const tokenData = await refreshResponse.json();
+            localStorage.setItem("access_token", tokenData.access_token);
+            localStorage.setItem("refresh_token", tokenData.refresh_token);
+
+            // Retry the original request with new token
+            const retryResponse = await fetch(response.url, {
+              ...response,
+              headers: {
+                ...response.headers,
+                Authorization: `Bearer ${tokenData.access_token}`,
+              },
+            });
+
+            if (retryResponse.ok) {
+              return retryResponse.json();
+            }
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+        }
+      }
+
+      // If refresh failed or no refresh token, clear and redirect
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
-
-      // Redirect to login page
       window.location.href = "/login";
 
       throw new ApiError(

@@ -9,7 +9,11 @@ import { RegisterPage } from "./pages/auth/RegisterPage";
 import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { DocumentUploadPage } from "./pages/documents/DocumentUploadPage";
 import { PatientsPage } from "./pages/patients/PatientsPage";
+import { NewPatientPage } from "./pages/patients/NewPatientPage";
+import { PatientDetailPage } from "./pages/patients/PatientDetailPage";
 import { SessionsPage } from "./pages/sessions/SessionsPage";
+import { NewSessionPage } from "./pages/sessions/NewSessionPage";
+import { SessionDetailPage } from "./pages/sessions/SessionDetailPage";
 import { SOAPGeneratePage } from "./pages/soap/SOAPGeneratePage";
 import { RAGQueryPage } from "./pages/rag/RAGQueryPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
@@ -50,10 +54,42 @@ function App() {
             }
           />
           <Route
+            path="/patients/new"
+            element={
+              <ProtectedRoute>
+                <NewPatientPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patients/:patientId"
+            element={
+              <ProtectedRoute>
+                <PatientDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/sessions"
             element={
               <ProtectedRoute>
                 <SessionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions/new"
+            element={
+              <ProtectedRoute>
+                <NewSessionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions/:sessionId"
+            element={
+              <ProtectedRoute>
+                <SessionDetailPage />
               </ProtectedRoute>
             }
           />

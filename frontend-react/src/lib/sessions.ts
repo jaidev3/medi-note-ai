@@ -20,7 +20,7 @@ export interface SessionResponse {
 export interface SessionCreateRequest {
   patient_id: string;
   professional_id?: string;
-  visit_date: string;
+  visit_date?: string;
   notes?: string;
 }
 

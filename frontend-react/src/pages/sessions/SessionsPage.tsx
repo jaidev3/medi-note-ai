@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Container,
@@ -47,6 +47,11 @@ export const SessionsPage: React.FC = () => {
   const totalCount = data?.total_count || 0;
   const totalPages = Math.ceil(totalCount / 20);
   const patients = patientsData?.patients || [];
+  const patientNameMap = useMemo(() => {
+    const entries = new Map<string, string>();
+    patients.forEach((patient) => entries.set(patient.id, patient.name));
+    return entries;
+  }, [patients]);
 
   const handleDeleteSession = async (sessionId: string) => {
     if (window.confirm("Are you sure you want to delete this session?")) {
@@ -169,7 +174,10 @@ export const SessionsPage: React.FC = () => {
                       }}
                     >
                       <TableCell>{session.session_id}</TableCell>
-                      <TableCell>{session.patient_id}</TableCell>
+                      <TableCell>
+                        {patientNameMap.get(session.patient_id) ||
+                          session.patient_id}
+                      </TableCell>
                       <TableCell>{formatDate(session.visit_date)}</TableCell>
                       <TableCell>{session.document_count}</TableCell>
                       <TableCell>{session.soap_note_count}</TableCell>

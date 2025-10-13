@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import {
   Container,
@@ -16,7 +16,7 @@ import {
   Grid,
 } from "@mui/material";
 import { Visibility, VisibilityOff, PersonAdd } from "@mui/icons-material";
-import { useRegister, useLogin } from "@/hooks/useAuthApi";
+import { useAuth } from "@/hooks/useAuth";
 import { RegisterRequest } from "@/lib";
 
 const ROLES = [
@@ -27,10 +27,10 @@ const ROLES = [
 ];
 
 export const RegisterPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { mutate: register, isPending, isError, error } = useRegister();
-  const { mutate: login } = useLogin();
+  const { register: registerUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     control,
@@ -48,20 +48,16 @@ export const RegisterPage: React.FC = () => {
     },
   });
 
-  const onSubmit = (data: RegisterRequest) => {
-    register(data, {
-      onSuccess: () => {
-        // Auto-login after registration
-        login(
-          { email: data.email, password: data.password },
-          {
-            onSuccess: () => {
-              navigate("/dashboard");
-            },
-          }
-        );
-      },
-    });
+  const onSubmit = async (data: RegisterRequest) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await registerUser(data);
+    } catch (err: any) {
+      setError(err?.message || "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -84,13 +80,7 @@ export const RegisterPage: React.FC = () => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Box display="flex" flexDirection="column" gap={3}>
-              {isError && (
-                <Alert severity="error">
-                  {error instanceof Error
-                    ? error.message
-                    : "Registration failed. Please try again."}
-                </Alert>
-              )}
+              {error && <Alert severity="error">{error}</Alert>}
 
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
@@ -143,8 +133,8 @@ export const RegisterPage: React.FC = () => {
                     rules={{
                       required: "Password is required",
                       minLength: {
-                        value: 6,
-                        message: "Password must be at least 6 characters",
+                        value: 8,
+                        message: "Password must be at least 8 characters",
                       },
                     }}
                     render={({ field }) => (
@@ -249,11 +239,11 @@ export const RegisterPage: React.FC = () => {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={isPending}
+                disabled={isLoading}
                 startIcon={<PersonAdd />}
                 sx={{ py: 1.5 }}
               >
-                {isPending ? "Creating account..." : "Create Account"}
+                {isLoading ? "Creating account..." : "Create Account"}
               </Button>
 
               <Box textAlign="center">

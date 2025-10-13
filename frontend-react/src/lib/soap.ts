@@ -30,7 +30,7 @@ export interface NERContextData {
 
 export interface SOAPGenerationRequest {
   text: string;
-  session_id: string;
+  session_id?: string;
   document_id?: string | null;
   professional_id?: string | null;
   include_context?: boolean;

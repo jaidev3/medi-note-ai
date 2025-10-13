@@ -82,10 +82,13 @@ export const authApi = {
 
   async refreshToken(refreshToken: string): Promise<TokenResponse> {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}?refresh_token=${refreshToken}`,
+      `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
       {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
       }
     );
 

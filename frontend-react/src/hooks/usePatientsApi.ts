@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { patientsApi, PatientCreateRequest, PatientUpdateRequest } from "@/lib";
+import {
+  patientsApi,
+  PatientCreateRequest,
+  PatientListResponse,
+  PatientResponse,
+  PatientUpdateRequest,
+  SessionListResponse,
+} from "@/lib";
 
 // List patients query
 export const useListPatients = (
@@ -7,7 +14,7 @@ export const useListPatients = (
   pageSize: number = 20,
   search?: string
 ) => {
-  return useQuery({
+  return useQuery<PatientListResponse>({
     queryKey: ["patients", page, pageSize, search],
     queryFn: () => {
       const token = localStorage.getItem("access_token");
@@ -20,7 +27,7 @@ export const useListPatients = (
 
 // Get patient query
 export const useGetPatient = (id: string) => {
-  return useQuery({
+  return useQuery<PatientResponse>({
     queryKey: ["patient", id],
     queryFn: () => {
       const token = localStorage.getItem("access_token");
@@ -37,7 +44,7 @@ export const useGetPatientVisits = (
   page: number = 1,
   pageSize: number = 50
 ) => {
-  return useQuery({
+  return useQuery<SessionListResponse>({
     queryKey: ["patientVisits", id, page, pageSize],
     queryFn: () => {
       const token = localStorage.getItem("access_token");

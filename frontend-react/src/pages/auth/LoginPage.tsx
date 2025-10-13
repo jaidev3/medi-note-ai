@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import {
   Container,
@@ -18,13 +18,14 @@ import {
   VisibilityOff,
   Login as LoginIcon,
 } from "@mui/icons-material";
-import { useLogin } from "@/hooks/useAuthApi";
+import { useAuth } from "@/hooks/useAuth";
 import { LoginRequest } from "@/lib";
 
 export const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { mutate: login, isPending, isError, error } = useLogin();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     control,
@@ -38,12 +39,15 @@ export const LoginPage: React.FC = () => {
   });
 
   const onSubmit = async (data: LoginRequest) => {
-    login(data, {
-      onSuccess: async () => {
-        // Get user profile and navigate
-        navigate("/dashboard");
-      },
-    });
+    setIsLoading(true);
+    setError(null);
+    try {
+      await login(data);
+    } catch (err: any) {
+      setError(err?.message || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -66,13 +70,7 @@ export const LoginPage: React.FC = () => {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Box display="flex" flexDirection="column" gap={3}>
-              {isError && (
-                <Alert severity="error">
-                  {error instanceof Error
-                    ? error.message
-                    : "Login failed. Please check your credentials."}
-                </Alert>
-              )}
+              {error && <Alert severity="error">{error}</Alert>}
 
               <Controller
                 name="email"
@@ -104,8 +102,8 @@ export const LoginPage: React.FC = () => {
                 rules={{
                   required: "Password is required",
                   minLength: {
-                    value: 6,
-                    message: "Password must be at least 6 characters",
+                    value: 8,
+                    message: "Password must be at least 8 characters",
                   },
                 }}
                 render={({ field }) => (
@@ -138,11 +136,11 @@ export const LoginPage: React.FC = () => {
                 variant="contained"
                 size="large"
                 fullWidth
-                disabled={isPending}
+                disabled={isLoading}
                 startIcon={<LoginIcon />}
                 sx={{ py: 1.5 }}
               >
-                {isPending ? "Signing in..." : "Sign In"}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
 
               <Box textAlign="center">

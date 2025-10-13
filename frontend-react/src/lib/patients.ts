@@ -4,6 +4,7 @@ import {
   getAuthHeaders,
   handleApiResponse,
 } from "./api-config";
+import type { SessionListResponse } from "./sessions";
 
 export interface PatientResponse {
   id: string;
@@ -135,7 +136,7 @@ export const patientsApi = {
     token: string,
     page: number = 1,
     pageSize: number = 50
-  ): Promise<any> {
+  ): Promise<SessionListResponse> {
     const params = new URLSearchParams({
       page: page.toString(),
       page_size: pageSize.toString(),
@@ -147,6 +148,6 @@ export const patientsApi = {
       headers: getAuthHeaders(token),
     });
 
-    return handleApiResponse<any>(response);
+    return handleApiResponse<SessionListResponse>(response);
   },
 };

@@ -54,20 +54,27 @@ async def login(login_data: UserLogin):
 
 
 @router.post("/refresh", response_model=Token, summary="Refresh Token")
-async def refresh_token(refresh_token: str):
+async def refresh_token(request: dict):
     """
     Generate new access token using refresh token.
     
     Args:
-        refresh_token: Valid refresh token
+        request: Dictionary containing refresh_token
         
     Returns:
         Token: New access token and refresh token
         
     Raises:
         HTTPException 401: Invalid refresh token
+        HTTPException 400: Missing refresh token
     """
-    return await auth_controller.refresh_token(refresh_token)
+    refresh_token_str = request.get("refresh_token")
+    if not refresh_token_str:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="refresh_token is required"
+        )
+    return await auth_controller.refresh_token(refresh_token_str)
 
 
 @router.get("/me", response_model=UserRead, summary="Current User Info")
