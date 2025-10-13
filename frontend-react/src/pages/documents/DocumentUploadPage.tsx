@@ -83,7 +83,7 @@ export const DocumentUploadPage: React.FC = () => {
   const handleDelete = async (documentId: string) => {
     if (window.confirm("Are you sure you want to delete this document?")) {
       try {
-        await deleteMutation.mutateAsync(documentId);
+        await deleteMutation.mutateAsync({ id: documentId });
       } catch (err) {
         console.error("Delete failed:", err);
       }
@@ -225,27 +225,37 @@ export const DocumentUploadPage: React.FC = () => {
                 Recent Documents
               </Typography>
               <List>
-                {documents.slice(0, 5).map((file) => (
-                  <ListItem key={file.id}>
-                    <ListItemText
-                      primary={file.filename}
-                      secondary={`${(file.file_size / 1024).toFixed(
-                        2
-                      )} KB - ${new Date(
-                        file.created_at
-                      ).toLocaleDateString()}`}
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleDelete(file.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
+                {documents.slice(0, 5).map((file, index) => {
+                  const key = file.id || file.document_id || index;
+                  const displayName =
+                    file.document_name || file.file_path || "Document";
+                  const createdAt = file.created_at
+                    ? new Date(file.created_at).toLocaleDateString()
+                    : "";
+                  const sizeKb = file.file_size
+                    ? (file.file_size / 1024).toFixed(2)
+                    : "0";
+
+                  return (
+                    <ListItem key={key}>
+                      <ListItemText
+                        primary={displayName}
+                        secondary={`${sizeKb} KB${
+                          createdAt ? ` - ${createdAt}` : ""
+                        }`}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleDelete(file.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  );
+                })}
               </List>
             </Box>
           ) : null}

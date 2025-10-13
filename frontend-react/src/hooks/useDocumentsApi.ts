@@ -5,6 +5,12 @@ import {
   DocumentUploadRequest,
   DocumentListResponse,
   DocumentContentResponse,
+  DocumentMetadata,
+  DocumentProcessRequest,
+  DocumentProcessResponse,
+  DocumentPiiStatusResponse,
+  DocumentDeleteOptions,
+  DocumentDeleteResponse,
 } from "@/lib";
 
 // Upload document mutation with full parameters
@@ -70,22 +76,89 @@ export const useDocument = (id: string) => {
   });
 };
 
+export const useDocumentMetadata = (id: string) => {
+  return useQuery<DocumentMetadata>({
+    queryKey: ["documentMetadata", id],
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return documentsApi.getMetadata(id, token);
+    },
+    enabled: !!id && !!localStorage.getItem("access_token"),
+  });
+};
+
+export const useDocumentPiiStatus = (id: string) => {
+  return useQuery<DocumentPiiStatusResponse>({
+    queryKey: ["documentPiiStatus", id],
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return documentsApi.getPiiStatus(id, token);
+    },
+    enabled: !!id && !!localStorage.getItem("access_token"),
+    refetchInterval: 10_000,
+  });
+};
+
 // Delete document mutation
 export const useDeleteDocument = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (id: string) => documentsApi.delete(id),
-    onSuccess: () => {
+  return useMutation<
+    DocumentDeleteResponse,
+    Error,
+    { id: string; options?: DocumentDeleteOptions }
+  >({
+    mutationFn: ({
+      id,
+      options,
+    }: {
+      id: string;
+      options?: DocumentDeleteOptions;
+    }) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return documentsApi.delete(id, options, token);
+    },
+    onSuccess: (_result: DocumentDeleteResponse) => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["sessionDocuments"] });
+      queryClient.invalidateQueries({ queryKey: ["documentMetadata"] });
     },
   });
 };
 
-// Download document mutation
-export const useDownloadDocument = () => {
-  return useMutation({
-    mutationFn: (id: string) => documentsApi.download(id),
+export const useProcessDocument = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    DocumentProcessResponse,
+    Error,
+    { id: string; data?: DocumentProcessRequest }
+  >({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data?: DocumentProcessRequest;
+    }) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return documentsApi.processDocument(
+        {
+          document_id: id,
+          ...data,
+        },
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documentMetadata"] });
+      queryClient.invalidateQueries({ queryKey: ["documentPiiStatus"] });
+      queryClient.invalidateQueries({ queryKey: ["sessionDocuments"] });
+    },
   });
 };
 

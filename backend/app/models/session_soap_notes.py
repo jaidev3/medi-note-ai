@@ -48,7 +48,7 @@ class SessionSoapNotes(Base):
     content = Column(JSONB, nullable=False)
     context_data = Column(JSONB, nullable=True)
     content_fts = Column(TSVECTOR, nullable=True)
-    embedding = Column(Vector(1536), nullable=True)
+    embedding = Column(Vector(768), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -7,11 +7,16 @@ import {
 
 export interface Document {
   id: string;
-  filename: string;
+  document_id?: string;
+  document_name: string;
   file_path: string;
   file_size: number;
-  mime_type: string;
-  uploaded_by: string;
+  file_type: string;
+  upload_status: string;
+  processed: boolean;
+  text_extracted: boolean;
+  soap_generated: boolean;
+  session_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,11 +66,71 @@ export interface DocumentUploadRequest {
 
 export interface DocumentUploadResponse {
   success: boolean;
-  message: string;
   document_id?: string;
-  filename?: string;
-  extracted_text?: string;
-  soap_note_id?: string;
+  document_name: string;
+  file_size: number;
+  file_type: string;
+  file_path?: string | null;
+  text_extracted: boolean;
+  extracted_text?: string | null;
+  word_count: number;
+  soap_note_id?: string | null;
+  soap_generated: boolean;
+  pii_masked: boolean;
+  pii_entities_found: number;
+  processing_time: number;
+  upload_time: number;
+  message: string;
+  warnings: string[];
+}
+
+export interface DocumentProcessRequest {
+  document_id: string;
+  extract_text?: boolean;
+  generate_soap?: boolean;
+  ocr_enabled?: boolean;
+  language?: string;
+}
+
+export interface DocumentProcessResponse {
+  success: boolean;
+  document_id: string;
+  extracted_text?: string | null;
+  page_count: number;
+  word_count: number;
+  soap_note_id?: string | null;
+  soap_generated: boolean;
+  soap_approved: boolean;
+  processing_time: number;
+  extraction_time: number;
+  soap_generation_time: number;
+  pii_masked: boolean;
+  pii_entities_found: number;
+  message: string;
+  warnings: string[];
+}
+
+export interface DocumentPiiStatusResponse {
+  document_id: string;
+  document_name: string;
+  text_extracted: boolean;
+  pii_processing_status: string;
+  pii_masked: boolean;
+  pii_entities_found: number | string;
+  processing_timestamp?: string | null;
+  pii_processing_note?: string;
+}
+
+export interface DocumentDeleteResponse {
+  success: boolean;
+  document_id: string;
+  file_deleted: boolean;
+  message: string;
+}
+
+export interface DocumentDeleteOptions {
+  delete_file?: boolean;
+  reason?: string;
 }
 
 export const documentsApi = {
@@ -103,7 +168,7 @@ export const documentsApi = {
     return handleApiResponse<DocumentUploadResponse>(response);
   },
 
-  async upload(file: File): Promise<Document> {
+  async upload(file: File): Promise<DocumentUploadResponse> {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -119,7 +184,7 @@ export const documentsApi = {
       }
     );
 
-    return handleApiResponse<Document>(response);
+    return handleApiResponse<DocumentUploadResponse>(response);
   },
 
   async list(): Promise<Document[]> {
@@ -146,35 +211,80 @@ export const documentsApi = {
     return handleApiResponse<Document>(response);
   },
 
-  async delete(id: string): Promise<void> {
+  async getMetadata(id: string, token?: string): Promise<DocumentMetadata> {
     const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.DELETE(id)}`,
-      {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to delete document");
-    }
-  },
-
-  async download(id: string): Promise<Blob> {
-    const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.DOWNLOAD(id)}`,
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.DETAIL(id)}`,
       {
         method: "GET",
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       }
     );
 
-    if (!response.ok) {
-      throw new Error("Failed to download document");
+    return handleApiResponse<DocumentMetadata>(response);
+  },
+
+  async getPiiStatus(
+    id: string,
+    token?: string
+  ): Promise<DocumentPiiStatusResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.PII_STATUS(id)}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<DocumentPiiStatusResponse>(response);
+  },
+
+  async processDocument(
+    data: DocumentProcessRequest,
+    token: string
+  ): Promise<DocumentProcessResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.PROCESS}`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          extract_text: true,
+          generate_soap: true,
+          ocr_enabled: true,
+          language: "en",
+          ...data,
+        }),
+      }
+    );
+
+    return handleApiResponse<DocumentProcessResponse>(response);
+  },
+
+  async delete(
+    id: string,
+    options: DocumentDeleteOptions = {},
+    token?: string
+  ): Promise<DocumentDeleteResponse> {
+    const params = new URLSearchParams();
+    if (options.delete_file !== undefined) {
+      params.append("delete_file", String(options.delete_file));
+    }
+    if (options.reason) {
+      params.append("reason", options.reason);
     }
 
-    return response.blob();
+    const query = params.toString();
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.DELETE(id)}${
+        query ? `?${query}` : ""
+      }`,
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<DocumentDeleteResponse>(response);
   },
 
   async listBySession(

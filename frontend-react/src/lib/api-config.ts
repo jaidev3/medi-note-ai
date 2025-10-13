@@ -17,10 +17,11 @@ export const API_ENDPOINTS = {
   },
   DOCUMENTS: {
     UPLOAD: "/documents/upload",
+    PROCESS: "/documents/process",
     LIST: "/documents",
     DETAIL: (id: string) => `/documents/${id}`,
     DELETE: (id: string) => `/documents/${id}`,
-    DOWNLOAD: (id: string) => `/documents/${id}/download`,
+    PII_STATUS: (id: string) => `/documents/${id}/pii-status`,
     SESSION: (sessionId: string) =>
       `/documents/sessions/${sessionId}/documents`,
     CONTENT: (id: string) => `/documents/${id}/content`,
@@ -45,12 +46,25 @@ export const API_ENDPOINTS = {
     DETAIL: (id: string) => `/soap/notes/${id}`,
     UPDATE: (id: string) => `/soap/notes/${id}`,
     DELETE: (id: string) => `/soap/notes/${id}`,
+    APPROVE: (id: string) => `/soap/notes/${id}/approve`,
+    BATCH_APPROVE: "/soap/notes/batch-approve",
+    SESSION_NOTES: (sessionId: string) =>
+      `/soap/sessions/${sessionId}/soap-notes`,
+    PENDING_APPROVALS: "/soap/pending-approvals",
+    TRIGGER_EMBEDDING: "/soap/notes/trigger-embedding",
+    EXPORT_PDF: (id: string) => `/soap/notes/${id}/export-pdf`,
     EXTRACT_PII: "/ai/pii/extract",
     EXTRACT_NER: "/ai/ner/extract",
   },
   RAG: {
     QUERY: "/rag/query",
-    EMBED: "/ai/embeddings/generate",
+    EMBED: "/rag/embed",
+    BATCH_EMBED: "/rag/batch-embed",
+    SIMILAR_NOTES: (noteId: string) => `/rag/similar/${noteId}`,
+    SEARCH_SIMILARITY: "/rag/search-similarity",
+    STATS: "/rag/stats",
+    NOTES_NEEDING_EMBEDDING: "/rag/notes-needing-embedding",
+    EMBED_APPROVED_NOTES: "/rag/embed-approved-notes",
   },
 };
 

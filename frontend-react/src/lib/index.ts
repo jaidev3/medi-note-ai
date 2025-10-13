@@ -21,6 +21,11 @@ export type {
   DocumentMetadata,
   DocumentListResponse,
   DocumentContentResponse,
+  DocumentProcessRequest,
+  DocumentProcessResponse,
+  DocumentPiiStatusResponse,
+  DocumentDeleteOptions,
+  DocumentDeleteResponse,
 } from "./documents";
 export type {
   PatientResponse,
@@ -42,13 +47,24 @@ export type {
   SOAPNote,
   SOAPSection,
   SOAPNoteUpdateRequest,
+  SOAPBatchApprovalPayload,
+  SOAPPendingApprovalsParams,
+  SOAPTriggerEmbeddingPayload,
+  SOAPTriggerEmbeddingResponse,
 } from "./soap";
 export type {
   RAGQueryRequest,
   RAGQueryResponse,
   RAGChunk,
-  EmbeddingGenerateRequest,
-  EmbeddingGenerateResponse,
+  RAGEmbeddingRequest,
+  RAGEmbeddingResponse,
+  RAGBatchEmbeddingRequest,
+  RAGSimilaritySearchRequest,
+  RAGSimilaritySearchResponse,
+  RAGEmbeddingStatsResponse,
+  RAGNotesNeedingEmbeddingRequest,
+  RAGNotesNeedingEmbeddingResponse,
+  RAGNoteNeedingEmbedding,
 } from "./rag";
 export type { UserStatsResponse, ProfessionalUpdateRequest } from "./users";
 export type {

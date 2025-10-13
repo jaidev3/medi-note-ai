@@ -83,6 +83,31 @@ export interface SOAPNoteUpdateRequest {
   content: Record<string, any>;
 }
 
+export interface SOAPBatchApprovalPayload {
+  note_ids: string[];
+  approved?: boolean;
+}
+
+export interface SOAPPendingApprovalsParams {
+  professional_id?: string;
+  limit?: number;
+}
+
+export interface SOAPTriggerEmbeddingPayload {
+  note_ids?: string[];
+  session_id?: string;
+  patient_id?: string;
+}
+
+export interface SOAPTriggerEmbeddingResponse {
+  success: boolean;
+  message: string;
+  embedded_count: number;
+  skipped_count: number;
+  failed_count?: number;
+  processing_time?: number;
+}
+
 export const soapApi = {
   async generateSOAPNote(
     data: SOAPGenerationRequest,
@@ -125,6 +150,31 @@ export const soapApi = {
     return handleApiResponse<SOAPNoteListResponse>(response);
   },
 
+  async listSessionSOAPNotes(
+    sessionId: string,
+    token: string,
+    approvedOnly: boolean = false
+  ): Promise<SOAPNoteResponse[]> {
+    const params = new URLSearchParams();
+    if (approvedOnly) {
+      params.set("approved_only", "true");
+    }
+
+    const query = params.toString();
+
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.SESSION_NOTES(sessionId)}${
+        query ? `?${query}` : ""
+      }`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<SOAPNoteResponse[]>(response);
+  },
+
   async getSOAPNote(id: string, token: string): Promise<SOAPNoteResponse> {
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.SOAP.DETAIL(id)}`,
@@ -154,21 +204,6 @@ export const soapApi = {
     return handleApiResponse<SOAPNoteResponse>(response);
   },
 
-  async deleteSOAPNote(id: string, token: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE_URL}${API_ENDPOINTS.SOAP.DELETE(id)}`,
-      {
-        method: "DELETE",
-        headers: getAuthHeaders(token),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to delete SOAP note");
-    }
-  },
-
   async extractPII(text: string, token: string): Promise<any> {
     const response = await fetch(
       `${API_BASE_URL}${API_ENDPOINTS.SOAP.EXTRACT_PII}`,
@@ -193,5 +228,107 @@ export const soapApi = {
     );
 
     return handleApiResponse<any>(response);
+  },
+
+  async approveSOAPNote(
+    id: string,
+    token: string,
+    approved: boolean = true
+  ): Promise<SOAPNoteResponse> {
+    const params = new URLSearchParams({
+      approved: approved ? "true" : "false",
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.APPROVE(id)}?${params.toString()}`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<SOAPNoteResponse>(response);
+  },
+
+  async batchApproveSOAPNotes(
+    data: SOAPBatchApprovalPayload,
+    token: string
+  ): Promise<SOAPNoteResponse[]> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.BATCH_APPROVE}`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          approved: true,
+          ...data,
+        }),
+      }
+    );
+
+    return handleApiResponse<SOAPNoteResponse[]>(response);
+  },
+
+  async getPendingApprovals(
+    token: string,
+    params: SOAPPendingApprovalsParams = {}
+  ): Promise<SOAPNoteResponse[]> {
+    const searchParams = new URLSearchParams();
+    if (params.professional_id) {
+      searchParams.set("professional_id", params.professional_id);
+    }
+    if (params.limit) {
+      searchParams.set("limit", params.limit.toString());
+    }
+
+    const query = searchParams.toString();
+
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.PENDING_APPROVALS}${
+        query ? `?${query}` : ""
+      }`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<SOAPNoteResponse[]>(response);
+  },
+
+  async triggerEmbeddingForApprovedNotes(
+    data: SOAPTriggerEmbeddingPayload,
+    token: string
+  ): Promise<SOAPTriggerEmbeddingResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.TRIGGER_EMBEDDING}`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(data),
+      }
+    );
+
+    return handleApiResponse<SOAPTriggerEmbeddingResponse>(response);
+  },
+
+  async exportSOAPNotePdf(id: string, token: string): Promise<Blob> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.SOAP.EXPORT_PDF(id)}`,
+      {
+        method: "GET",
+        headers: {
+          ...getAuthHeaders(token),
+          Accept: "application/pdf",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to export SOAP note PDF");
+    }
+
+    return response.blob();
   },
 };
