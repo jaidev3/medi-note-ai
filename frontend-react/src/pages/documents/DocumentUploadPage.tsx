@@ -15,49 +15,78 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  CircularProgress,
 } from "@mui/material";
 import { ArrowBack, CloudUpload, Delete } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
-import { documentsApi, Document } from "@/lib";
+import {
+  useUploadDocument,
+  useDocuments,
+  useDeleteDocument,
+} from "@/hooks/useDocumentsApi";
+import { useListSessions } from "@/hooks/useSessionsApi";
 
 export const DocumentUploadPage: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState<Document[]>([]);
+  const [sessionId, setSessionId] = useState("");
+  const [description, setDescription] = useState("");
+  const [extractText, setExtractText] = useState(true);
+  const [generateSoap, setGenerateSoap] = useState(false);
+
+  const uploadMutation = useUploadDocument();
+  const { data: documents, isLoading: documentsLoading } = useDocuments();
+  const { data: sessionsData } = useListSessions(1, 100);
+  const deleteMutation = useDeleteDocument();
+
+  const sessions = sessionsData?.sessions || [];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
-      setMessage("");
-      setError("");
     }
   };
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      setError("Please select a file first");
       return;
     }
 
-    setUploading(true);
-    setError("");
-    setMessage("");
+    if (!sessionId) {
+      alert("Please select a session before uploading");
+      return;
+    }
 
     try {
-      const result = await documentsApi.upload(selectedFile);
-      setMessage(`File "${selectedFile.name}" uploaded successfully!`);
-      setUploadedFiles([...uploadedFiles, result]);
+      await uploadMutation.mutateAsync({
+        file: selectedFile,
+        session_id: sessionId,
+        description: description || undefined,
+        extract_text: extractText,
+        generate_soap: generateSoap,
+      });
       setSelectedFile(null);
+      setDescription("");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Upload failed. Please try again."
-      );
-    } finally {
-      setUploading(false);
+      console.error("Upload failed:", err);
+    }
+  };
+
+  const handleDelete = async (documentId: string) => {
+    if (window.confirm("Are you sure you want to delete this document?")) {
+      try {
+        await deleteMutation.mutateAsync(documentId);
+      } catch (err) {
+        console.error("Delete failed:", err);
+      }
     }
   };
 
@@ -87,18 +116,67 @@ export const DocumentUploadPage: React.FC = () => {
             Upload Document
           </Typography>
 
-          {message && (
+          {uploadMutation.isSuccess && (
             <Alert severity="success" sx={{ mb: 2 }}>
-              {message}
+              File uploaded successfully!
             </Alert>
           )}
-          {error && (
+          {uploadMutation.error && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
+              {uploadMutation.error.message}
             </Alert>
           )}
 
           <Box sx={{ mt: 3 }}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Session (Optional)</InputLabel>
+              <Select
+                value={sessionId}
+                onChange={(e) => setSessionId(e.target.value)}
+                label="Session (Optional)"
+              >
+                <MenuItem value="">None</MenuItem>
+                {sessions.map((session) => (
+                  <MenuItem key={session.session_id} value={session.session_id}>
+                    Session {session.session_id} -{" "}
+                    {new Date(session.visit_date).toLocaleDateString()}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Description (Optional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={extractText}
+                  onChange={(e) => setExtractText(e.target.checked)}
+                />
+              }
+              label="Extract text from document"
+              sx={{ mb: 1, display: "block" }}
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={generateSoap}
+                  onChange={(e) => setGenerateSoap(e.target.checked)}
+                />
+              }
+              label="Generate SOAP note automatically"
+              sx={{ mb: 2, display: "block" }}
+            />
+
             <input
               accept=".pdf,.doc,.docx,.txt"
               style={{ display: "none" }}
@@ -129,28 +207,40 @@ export const DocumentUploadPage: React.FC = () => {
               variant="contained"
               fullWidth
               onClick={handleUpload}
-              disabled={!selectedFile || uploading}
+              disabled={!selectedFile || uploadMutation.isPending}
             >
-              {uploading ? "Uploading..." : "Upload"}
+              {uploadMutation.isPending ? "Uploading..." : "Upload"}
             </Button>
 
-            {uploading && <LinearProgress sx={{ mt: 2 }} />}
+            {uploadMutation.isPending && <LinearProgress sx={{ mt: 2 }} />}
           </Box>
 
-          {uploadedFiles.length > 0 && (
+          {documentsLoading ? (
+            <Box sx={{ mt: 4, textAlign: "center" }}>
+              <CircularProgress />
+            </Box>
+          ) : documents && documents.length > 0 ? (
             <Box sx={{ mt: 4 }}>
               <Typography variant="h6" gutterBottom>
-                Uploaded Files
+                Recent Documents
               </Typography>
               <List>
-                {uploadedFiles.map((file) => (
+                {documents.slice(0, 5).map((file) => (
                   <ListItem key={file.id}>
                     <ListItemText
                       primary={file.filename}
-                      secondary={`${(file.file_size / 1024).toFixed(2)} KB`}
+                      secondary={`${(file.file_size / 1024).toFixed(
+                        2
+                      )} KB - ${new Date(
+                        file.created_at
+                      ).toLocaleDateString()}`}
                     />
                     <ListItemSecondaryAction>
-                      <IconButton edge="end">
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleDelete(file.id)}
+                        disabled={deleteMutation.isPending}
+                      >
                         <Delete />
                       </IconButton>
                     </ListItemSecondaryAction>
@@ -158,7 +248,7 @@ export const DocumentUploadPage: React.FC = () => {
                 ))}
               </List>
             </Box>
-          )}
+          ) : null}
         </Paper>
       </Container>
     </div>

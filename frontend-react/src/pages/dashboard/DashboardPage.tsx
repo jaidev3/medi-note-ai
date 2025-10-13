@@ -12,6 +12,8 @@ import {
   CardContent,
   CardActions,
   IconButton,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import {
   Description,
@@ -23,10 +25,16 @@ import {
   Logout,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
+import { useGetUserStats } from "@/hooks/useUsersApi";
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useGetUserStats();
 
   const menuItems = [
     {
@@ -101,6 +109,68 @@ export const DashboardPage: React.FC = () => {
             Welcome back! Select an option below to get started.
           </Typography>
         </Box>
+
+        {/* Stats Overview */}
+        {statsLoading ? (
+          <Box display="flex" justifyContent="center" my={4}>
+            <CircularProgress />
+          </Box>
+        ) : statsError ? (
+          <Alert severity="error" sx={{ mb: 4 }}>
+            Failed to load statistics
+          </Alert>
+        ) : stats ? (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="text.secondary" gutterBottom>
+                    Total Patients
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.total_patients}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="text.secondary" gutterBottom>
+                    Total Sessions
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.total_sessions}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="text.secondary" gutterBottom>
+                    SOAP Notes
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.total_soap_notes}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="text.secondary" gutterBottom>
+                    Documents
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.total_documents}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        ) : null}
 
         <Grid container spacing={3}>
           {menuItems.map((item, index) => (

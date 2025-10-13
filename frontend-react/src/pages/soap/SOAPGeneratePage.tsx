@@ -12,39 +12,63 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
+  Chip,
 } from "@mui/material";
 import { ArrowBack, Send } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
+import { useGenerateSOAPNote, useUpdateSOAPNote } from "@/hooks/useSoapApi";
+import { useListSessions } from "@/hooks/useSessionsApi";
 
 export const SOAPGeneratePage: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [transcript, setTranscript] = useState("");
-  const [soapNote, setSoapNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [sessionId, setSessionId] = useState("");
+  const [generatedNote, setGeneratedNote] = useState<any>(null);
+
+  const { data: sessionsData } = useListSessions(1, 100);
+  const generateMutation = useGenerateSOAPNote();
+  const updateMutation = useUpdateSOAPNote();
+
+  const sessions = sessionsData?.sessions || [];
 
   const handleGenerate = async () => {
     if (!transcript.trim()) {
-      setError("Please enter a transcript");
       return;
     }
 
-    setLoading(true);
-    setError("");
+    try {
+      const result = await generateMutation.mutateAsync({
+        transcript,
+        session_id: sessionId || undefined,
+      });
+      setGeneratedNote(result);
+    } catch (err) {
+      console.error("Failed to generate SOAP note:", err);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!generatedNote?.id) return;
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setSoapNote(
-        "Generated SOAP note will appear here...\n\nSubjective:\n\nObjective:\n\nAssessment:\n\nPlan:"
-      );
+      await updateMutation.mutateAsync({
+        id: generatedNote.id,
+        data: {
+          subjective: generatedNote.subjective,
+          objective: generatedNote.objective,
+          assessment: generatedNote.assessment,
+          plan: generatedNote.plan,
+        },
+      });
+      alert("SOAP note saved successfully!");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to generate SOAP note"
-      );
-    } finally {
-      setLoading(false);
+      console.error("Failed to save SOAP note:", err);
     }
   };
 
@@ -69,11 +93,30 @@ export const SOAPGeneratePage: React.FC = () => {
       </AppBar>
 
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {error && (
+        {generateMutation.error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+            Failed to generate SOAP note: {generateMutation.error.message}
           </Alert>
         )}
+
+        <Box sx={{ mb: 3 }}>
+          <FormControl fullWidth>
+            <InputLabel>Session (Optional)</InputLabel>
+            <Select
+              value={sessionId}
+              onChange={(e) => setSessionId(e.target.value)}
+              label="Session (Optional)"
+            >
+              <MenuItem value="">None</MenuItem>
+              {sessions.map((session) => (
+                <MenuItem key={session.session_id} value={session.session_id}>
+                  Session {session.session_id} -{" "}
+                  {new Date(session.visit_date).toLocaleDateString()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
 
         <Box
           display="flex"
@@ -96,12 +139,20 @@ export const SOAPGeneratePage: React.FC = () => {
             <Button
               variant="contained"
               fullWidth
-              startIcon={loading ? <CircularProgress size={20} /> : <Send />}
+              startIcon={
+                generateMutation.isPending ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <Send />
+                )
+              }
               onClick={handleGenerate}
-              disabled={loading}
+              disabled={generateMutation.isPending || !transcript.trim()}
               sx={{ mt: 2 }}
             >
-              {loading ? "Generating..." : "Generate SOAP Note"}
+              {generateMutation.isPending
+                ? "Generating..."
+                : "Generate SOAP Note"}
             </Button>
           </Paper>
 
@@ -109,23 +160,119 @@ export const SOAPGeneratePage: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Generated SOAP Note
             </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={20}
-              value={soapNote}
-              onChange={(e) => setSoapNote(e.target.value)}
-              placeholder="Generated SOAP note will appear here..."
-              variant="outlined"
-            />
-            <Button
-              variant="outlined"
-              fullWidth
-              disabled={!soapNote}
-              sx={{ mt: 2 }}
-            >
-              Save SOAP Note
-            </Button>
+
+            {generatedNote ? (
+              <>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Processing Time:{" "}
+                    <Chip
+                      label={`${
+                        generatedNote.processing_time_seconds?.toFixed(2) || 0
+                      }s`}
+                      size="small"
+                      color="primary"
+                    />
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Subjective
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {generatedNote.subjective || "N/A"}
+                  </Typography>
+                  {generatedNote.subjective_confidence && (
+                    <Chip
+                      label={`Confidence: ${(
+                        generatedNote.subjective_confidence * 100
+                      ).toFixed(1)}%`}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Objective
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {generatedNote.objective || "N/A"}
+                  </Typography>
+                  {generatedNote.objective_confidence && (
+                    <Chip
+                      label={`Confidence: ${(
+                        generatedNote.objective_confidence * 100
+                      ).toFixed(1)}%`}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Assessment
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {generatedNote.assessment || "N/A"}
+                  </Typography>
+                  {generatedNote.assessment_confidence && (
+                    <Chip
+                      label={`Confidence: ${(
+                        generatedNote.assessment_confidence * 100
+                      ).toFixed(1)}%`}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Plan
+                  </Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                    {generatedNote.plan || "N/A"}
+                  </Typography>
+                  {generatedNote.plan_confidence && (
+                    <Chip
+                      label={`Confidence: ${(
+                        generatedNote.plan_confidence * 100
+                      ).toFixed(1)}%`}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={handleSave}
+                  disabled={updateMutation.isPending}
+                  sx={{ mt: 2 }}
+                >
+                  {updateMutation.isPending ? "Saving..." : "Save SOAP Note"}
+                </Button>
+              </>
+            ) : (
+              <Box sx={{ py: 10, textAlign: "center" }}>
+                <Typography color="text.secondary">
+                  Generated SOAP note will appear here...
+                </Typography>
+              </Box>
+            )}
           </Paper>
         </Box>
       </Container>

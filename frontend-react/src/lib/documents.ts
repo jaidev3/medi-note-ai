@@ -16,7 +16,59 @@ export interface Document {
   updated_at: string;
 }
 
+export interface DocumentUploadRequest {
+  session_id: string;
+  file: File;
+  description?: string;
+  upload_source?: string;
+  extract_text?: boolean;
+  generate_soap?: boolean;
+}
+
+export interface DocumentUploadResponse {
+  success: boolean;
+  message: string;
+  document_id?: string;
+  filename?: string;
+  extracted_text?: string;
+  soap_note_id?: string;
+}
+
 export const documentsApi = {
+  async uploadDocument(
+    data: DocumentUploadRequest,
+    token: string
+  ): Promise<DocumentUploadResponse> {
+    const formData = new FormData();
+    formData.append("file", data.file);
+    formData.append("session_id", data.session_id);
+    if (data.description) {
+      formData.append("description", data.description);
+    }
+    if (data.upload_source) {
+      formData.append("upload_source", data.upload_source);
+    }
+    if (data.extract_text !== undefined) {
+      formData.append("extract_text", data.extract_text.toString());
+    }
+    if (data.generate_soap !== undefined) {
+      formData.append("generate_soap", data.generate_soap.toString());
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.UPLOAD}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: formData,
+      }
+    );
+
+    return handleApiResponse<DocumentUploadResponse>(response);
+  },
+
   async upload(file: File): Promise<Document> {
     const formData = new FormData();
     formData.append("file", file);
