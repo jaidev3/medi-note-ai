@@ -4,11 +4,13 @@ import { soapApi, SOAPGenerationRequest } from "@/lib";
 // Generate SOAP note mutation
 export const useGenerateSOAPNote = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (data: SOAPGenerationRequest) =>
-      soapApi.generateSOAPNote(data, token!),
+    mutationFn: (data: SOAPGenerationRequest) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.generateSOAPNote(data, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["soapNotes"] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
@@ -22,34 +24,40 @@ export const useListSOAPNotes = (
   pageSize: number = 20,
   sessionId?: string
 ) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["soapNotes", page, pageSize, sessionId],
-    queryFn: () => soapApi.listSOAPNotes(token!, page, pageSize, sessionId),
-    enabled: !!token,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.listSOAPNotes(token, page, pageSize, sessionId);
+    },
+    enabled: !!localStorage.getItem("access_token"),
   });
 };
 
 // Get SOAP note query
 export const useGetSOAPNote = (id: string) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["soapNote", id],
-    queryFn: () => soapApi.getSOAPNote(id, token!),
-    enabled: !!token && !!id,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.getSOAPNote(id, token);
+    },
+    enabled: !!localStorage.getItem("access_token") && !!id,
   });
 };
 
 // Update SOAP note mutation
 export const useUpdateSOAPNote = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      soapApi.updateSOAPNote(id, data, token!),
+    mutationFn: ({ id, data }: { id: string; data: any }) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.updateSOAPNote(id, data, token);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["soapNotes"] });
       queryClient.invalidateQueries({ queryKey: ["soapNote", variables.id] });
@@ -60,10 +68,13 @@ export const useUpdateSOAPNote = () => {
 // Delete SOAP note mutation
 export const useDeleteSOAPNote = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (id: string) => soapApi.deleteSOAPNote(id, token!),
+    mutationFn: (id: string) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.deleteSOAPNote(id, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["soapNotes"] });
     },
@@ -72,18 +83,22 @@ export const useDeleteSOAPNote = () => {
 
 // Extract PII mutation
 export const useExtractPII = () => {
-  const token = localStorage.getItem("access_token");
-
   return useMutation({
-    mutationFn: (text: string) => soapApi.extractPII(text, token!),
+    mutationFn: (text: string) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.extractPII(text, token);
+    },
   });
 };
 
 // Extract NER mutation
 export const useExtractNER = () => {
-  const token = localStorage.getItem("access_token");
-
   return useMutation({
-    mutationFn: (text: string) => soapApi.extractNER(text, token!),
+    mutationFn: (text: string) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return soapApi.extractNER(text, token);
+    },
   });
 };

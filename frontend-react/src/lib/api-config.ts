@@ -76,6 +76,19 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
     const error = await response
       .json()
       .catch(() => ({ detail: "An error occurred" }));
+    
+    // Handle 401 Unauthorized - token expired or invalid
+    if (response.status === 401) {
+      // Clear tokens and redirect to login
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      
+      // Redirect to login page
+      window.location.href = "/login";
+      
+      throw new ApiError(error.detail || "Unauthorized - please login again", response.status);
+    }
+    
     throw new ApiError(error.detail || "An error occurred", response.status);
   }
   return response.json();

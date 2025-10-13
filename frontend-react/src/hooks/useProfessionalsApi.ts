@@ -6,22 +6,26 @@ export const useListProfessionals = (
   page: number = 1,
   pageSize: number = 100
 ) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["professionals", page, pageSize],
-    queryFn: () => professionalsApi.listProfessionals(token!, page, pageSize),
-    enabled: !!token,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return professionalsApi.listProfessionals(token, page, pageSize);
+    },
+    enabled: !!localStorage.getItem("access_token"),
   });
 };
 
 // Get professional query
 export const useGetProfessional = (id: string) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["professional", id],
-    queryFn: () => professionalsApi.getProfessional(id, token!),
-    enabled: !!token && !!id,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return professionalsApi.getProfessional(id, token);
+    },
+    enabled: !!localStorage.getItem("access_token") && !!id,
   });
 };

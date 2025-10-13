@@ -3,20 +3,22 @@ import { ragApi, RAGQueryRequest, EmbeddingGenerateRequest } from "@/lib";
 
 // Query knowledge base mutation
 export const useQueryKnowledgeBase = () => {
-  const token = localStorage.getItem("access_token");
-
   return useMutation({
-    mutationFn: (data: RAGQueryRequest) =>
-      ragApi.queryKnowledgeBase(data, token!),
+    mutationFn: (data: RAGQueryRequest) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return ragApi.queryKnowledgeBase(data, token);
+    },
   });
 };
 
 // Generate embeddings mutation
 export const useGenerateEmbeddings = () => {
-  const token = localStorage.getItem("access_token");
-
   return useMutation({
-    mutationFn: (data: EmbeddingGenerateRequest) =>
-      ragApi.generateEmbeddings(data, token!),
+    mutationFn: (data: EmbeddingGenerateRequest) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return ragApi.generateEmbeddings(data, token);
+    },
   });
 };

@@ -3,19 +3,20 @@ import { usersApi, ProfessionalUpdateRequest } from "@/lib";
 
 // Get user stats query
 export const useGetUserStats = () => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["userStats"],
-    queryFn: () => usersApi.getUserStats(token!),
-    enabled: !!token,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return usersApi.getUserStats(token);
+    },
+    enabled: !!localStorage.getItem("access_token"),
   });
 };
 
 // Update professional mutation
 export const useUpdateProfessional = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
     mutationFn: ({
@@ -24,7 +25,11 @@ export const useUpdateProfessional = () => {
     }: {
       id: string;
       data: ProfessionalUpdateRequest;
-    }) => usersApi.updateProfessional(id, data, token!),
+    }) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return usersApi.updateProfessional(id, data, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -34,33 +39,40 @@ export const useUpdateProfessional = () => {
 
 // Get user query
 export const useGetUser = (id: string) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["user", id],
-    queryFn: () => usersApi.getUser(id, token!),
-    enabled: !!token && !!id,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return usersApi.getUser(id, token);
+    },
+    enabled: !!localStorage.getItem("access_token") && !!id,
   });
 };
 
 // List users query
 export const useListUsers = () => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["users"],
-    queryFn: () => usersApi.listUsers(token!),
-    enabled: !!token,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return usersApi.listUsers(token);
+    },
+    enabled: !!localStorage.getItem("access_token"),
   });
 };
 
 // Delete user mutation
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (id: string) => usersApi.deleteUser(id, token!),
+    mutationFn: (id: string) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return usersApi.deleteUser(id, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },

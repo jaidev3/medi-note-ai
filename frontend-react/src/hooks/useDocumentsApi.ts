@@ -4,11 +4,13 @@ import { documentsApi, Document, DocumentUploadRequest } from "@/lib";
 // Upload document mutation with full parameters
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (data: DocumentUploadRequest) =>
-      documentsApi.uploadDocument(data, token!),
+    mutationFn: (data: DocumentUploadRequest) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return documentsApi.uploadDocument(data, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });

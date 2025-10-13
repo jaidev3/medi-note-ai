@@ -8,41 +8,46 @@ export const useListSessions = (
   patientId?: string,
   professionalId?: string
 ) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["sessions", page, pageSize, patientId, professionalId],
-    queryFn: () =>
-      sessionsApi.listSessions(
-        token!,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return sessionsApi.listSessions(
+        token,
         page,
         pageSize,
         patientId,
         professionalId
-      ),
-    enabled: !!token,
+      );
+    },
+    enabled: !!localStorage.getItem("access_token"),
   });
 };
 
 // Get session query
 export const useGetSession = (id: string) => {
-  const token = localStorage.getItem("access_token");
-
   return useQuery({
     queryKey: ["session", id],
-    queryFn: () => sessionsApi.getSession(id, token!),
-    enabled: !!token && !!id,
+    queryFn: () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return sessionsApi.getSession(id, token);
+    },
+    enabled: !!localStorage.getItem("access_token") && !!id,
   });
 };
 
 // Create session mutation
 export const useCreateSession = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (data: SessionCreateRequest) =>
-      sessionsApi.createSession(data, token!),
+    mutationFn: (data: SessionCreateRequest) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return sessionsApi.createSession(data, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["patients"] });
@@ -53,11 +58,13 @@ export const useCreateSession = () => {
 // Update session mutation
 export const useUpdateSession = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: SessionUpdateRequest }) =>
-      sessionsApi.updateSession(id, data, token!),
+    mutationFn: ({ id, data }: { id: string; data: SessionUpdateRequest }) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return sessionsApi.updateSession(id, data, token);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["session", variables.id] });
@@ -68,10 +75,13 @@ export const useUpdateSession = () => {
 // Delete session mutation
 export const useDeleteSession = () => {
   const queryClient = useQueryClient();
-  const token = localStorage.getItem("access_token");
 
   return useMutation({
-    mutationFn: (id: string) => sessionsApi.deleteSession(id, token!),
+    mutationFn: (id: string) => {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("No access token found");
+      return sessionsApi.deleteSession(id, token);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
