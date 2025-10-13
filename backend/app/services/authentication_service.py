@@ -29,8 +29,8 @@ class AuthenticationService:
         """Initialize authentication service."""
         self.secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
         self.algorithm = os.getenv("JWT_ALGORITHM", "HS256")
-        self.access_token_expire_minutes = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-        self.refresh_token_expire_days = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+        self.access_token_expire_minutes = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+        self.refresh_token_expire_days = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
         self.bcrypt_rounds = int(os.getenv("BCRYPT_ROUNDS", "12"))
     
     def hash_password(self, password: str) -> str:
