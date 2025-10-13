@@ -18,6 +18,9 @@ export type {
   Document,
   DocumentUploadRequest,
   DocumentUploadResponse,
+  DocumentMetadata,
+  DocumentListResponse,
+  DocumentContentResponse,
 } from "./documents";
 export type {
   PatientResponse,
@@ -38,6 +41,7 @@ export type {
   SOAPNoteListResponse,
   SOAPNote,
   SOAPSection,
+  SOAPNoteUpdateRequest,
 } from "./soap";
 export type {
   RAGQueryRequest,

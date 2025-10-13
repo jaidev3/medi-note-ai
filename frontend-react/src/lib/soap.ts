@@ -16,6 +16,9 @@ export interface SOAPNote {
   objective: SOAPSection;
   assessment: SOAPSection;
   plan: SOAPSection;
+  generated_at?: string;
+  model_version?: string;
+  total_confidence?: number;
 }
 
 export interface NERContextData {
@@ -30,37 +33,43 @@ export interface NERContextData {
 
 export interface SOAPGenerationRequest {
   text: string;
-  session_id?: string;
+  session_id: string;
   document_id?: string | null;
   professional_id?: string | null;
   include_context?: boolean;
   max_length?: number;
   temperature?: number;
+  enable_pii_masking?: boolean;
+  preserve_medical_context?: boolean;
 }
 
 export interface SOAPGenerationResponse {
   success: boolean;
   message: string;
-  soap_note: SOAPNote;
+  soap_note?: SOAPNote | null;
   note_id?: string;
   processing_time: number;
   ai_approved: boolean;
   regeneration_count: number;
   context_data?: NERContextData;
   validation_feedback?: string;
+  pii_masked?: boolean;
+  pii_entities_found?: number;
+  original_text_preserved?: boolean;
 }
 
 export interface SOAPNoteResponse {
-  id: string;
+  note_id: string;
   session_id: string;
-  professional_id?: string;
-  subjective: string;
-  objective: string;
-  assessment: string;
-  plan: string;
+  document_id?: string | null;
+  professional_id?: string | null;
   ai_approved: boolean;
+  user_approved: boolean;
+  content: Record<string, any>;
+  context_data?: Record<string, any> | null;
   created_at: string;
   updated_at: string;
+  soap_note?: SOAPNote;
 }
 
 export interface SOAPNoteListResponse {
@@ -68,6 +77,10 @@ export interface SOAPNoteListResponse {
   total_count: number;
   page: number;
   page_size: number;
+}
+
+export interface SOAPNoteUpdateRequest {
+  content: Record<string, any>;
 }
 
 export const soapApi = {
@@ -126,7 +139,7 @@ export const soapApi = {
 
   async updateSOAPNote(
     id: string,
-    data: Partial<SOAPNoteResponse>,
+    data: SOAPNoteUpdateRequest,
     token: string
   ): Promise<SOAPNoteResponse> {
     const response = await fetch(

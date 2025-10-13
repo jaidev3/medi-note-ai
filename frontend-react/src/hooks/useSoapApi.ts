@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { soapApi, SOAPGenerationRequest } from "@/lib";
+import { soapApi, SOAPGenerationRequest, SOAPNoteUpdateRequest } from "@/lib";
 
 // Generate SOAP note mutation
 export const useGenerateSOAPNote = () => {
@@ -53,7 +53,7 @@ export const useUpdateSOAPNote = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => {
+    mutationFn: ({ id, data }: { id: string; data: SOAPNoteUpdateRequest }) => {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No access token found");
       return soapApi.updateSOAPNote(id, data, token);

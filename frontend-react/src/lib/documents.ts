@@ -16,6 +16,40 @@ export interface Document {
   updated_at: string;
 }
 
+export interface DocumentMetadata {
+  document_id: string;
+  session_id: string;
+  document_name: string;
+  file_size: number;
+  file_type: string;
+  file_path: string;
+  upload_status: string;
+  processed: boolean;
+  text_extracted: boolean;
+  soap_generated: boolean;
+  created_at: string;
+  updated_at: string;
+  processed_at?: string | null;
+}
+
+export interface DocumentListResponse {
+  documents: DocumentMetadata[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  session_id?: string;
+}
+
+export interface DocumentContentResponse {
+  document_id: string;
+  content: string;
+  content_type: string;
+  extracted: boolean;
+  word_count: number;
+  processing_status: string;
+  message?: string;
+}
+
 export interface DocumentUploadRequest {
   session_id: string;
   file: File;
@@ -141,5 +175,42 @@ export const documentsApi = {
     }
 
     return response.blob();
+  },
+
+  async listBySession(
+    sessionId: string,
+    token: string,
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<DocumentListResponse> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: pageSize.toString(),
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.SESSION(sessionId)}?${params}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<DocumentListResponse>(response);
+  },
+
+  async getContent(
+    id: string,
+    token: string
+  ): Promise<DocumentContentResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.CONTENT(id)}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(token),
+      }
+    );
+
+    return handleApiResponse<DocumentContentResponse>(response);
   },
 };

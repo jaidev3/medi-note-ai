@@ -34,7 +34,8 @@ class SOAPGenerationService:
         """Initialize Gemini models for SOAP generation and validation."""
         try:
             google_api_key = os.getenv("GOOGLE_API_KEY")
-            gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            # Prefer repository convention env var names
+            gemini_model = os.getenv("GEMINI_MODEL") or os.getenv("AI_SERVICE_GEMINI_MODEL") or os.getenv("GOOGLE_MODEL") or "gemini-mini"
             temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
             
             logger.info("Initializing Gemini models for SOAP generation and Judge validation")
@@ -43,26 +44,35 @@ class SOAPGenerationService:
             genai.configure(api_key=google_api_key)
             
             # Initialize Gemini model for SOAP generation
-            self.soap_model = genai.GenerativeModel(
-                model_name=gemini_model,
-                generation_config={
-                    "temperature": temperature,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,
-                }
-            )
+            try:
+                self.soap_model = genai.GenerativeModel(
+                    model_name=gemini_model,
+                    generation_config={
+                        "temperature": temperature,
+                        "top_p": 0.95,
+                        "top_k": 40,
+                        "max_output_tokens": 2048,
+                    }
+                )
+            except Exception as e:
+                logger.error("Failed to initialize Gemini SOAP model", model=gemini_model, error=str(e))
+                # Re-raise with clearer guidance
+                raise RuntimeError(f"Failed to initialize Gemini model '{gemini_model}': {e}\nCheck your AI_SERVICE_GEMINI_MODEL/GEMINI_MODEL env vars and the Google Generative AI SDK compatibility.")
             
             # Initialize Gemini model for Judge validation
-            self.judge_model = genai.GenerativeModel(
-                model_name=gemini_model,
-                generation_config={
-                    "temperature": 0.1,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 1024,
-                }
-            )
+            try:
+                self.judge_model = genai.GenerativeModel(
+                    model_name=gemini_model,
+                    generation_config={
+                        "temperature": 0.1,
+                        "top_p": 0.95,
+                        "top_k": 40,
+                        "max_output_tokens": 1024,
+                    }
+                )
+            except Exception as e:
+                logger.error("Failed to initialize Gemini Judge model", model=gemini_model, error=str(e))
+                raise RuntimeError(f"Failed to initialize Gemini Judge model '{gemini_model}': {e}")
 
             logger.info("✅ Gemini models initialized for SOAP and Judge")
             
@@ -249,7 +259,22 @@ Return ONLY the JSON assessment, no additional text."""
         try:
             prompt = self._create_judge_prompt(soap_note)
             response = self.judge_model.generate_content(prompt)
-            response_text = response.text.strip()
+            # generative.ai responses differ by SDK version; try common access patterns
+            response_text = None
+            try:
+                response_text = response.text.strip()
+            except Exception:
+                try:
+                    # newer SDKs may put text under .output[0].content[0].text
+                    response_text = response.output[0].content[0].text.strip()
+                except Exception:
+                    try:
+                        # dict-like access
+                        response_text = (response.get("candidates")[0].get("content") if isinstance(response, dict) and response.get("candidates") else None)
+                        if isinstance(response_text, str):
+                            response_text = response_text.strip()
+                    except Exception:
+                        response_text = str(response)
             
             # Parse JSON response
             try:

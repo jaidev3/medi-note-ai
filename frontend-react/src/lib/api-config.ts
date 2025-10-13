@@ -21,6 +21,9 @@ export const API_ENDPOINTS = {
     DETAIL: (id: string) => `/documents/${id}`,
     DELETE: (id: string) => `/documents/${id}`,
     DOWNLOAD: (id: string) => `/documents/${id}/download`,
+    SESSION: (sessionId: string) =>
+      `/documents/sessions/${sessionId}/documents`,
+    CONTENT: (id: string) => `/documents/${id}/content`,
   },
   PATIENTS: {
     LIST: "/patients",
@@ -37,11 +40,11 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/sessions/${id}`,
   },
   SOAP: {
-    GENERATE: "/ai/soap/generate",
-    LIST: "/soap",
-    DETAIL: (id: string) => `/soap/${id}`,
-    UPDATE: (id: string) => `/soap/${id}`,
-    DELETE: (id: string) => `/soap/${id}`,
+    GENERATE: "/soap/generate",
+    LIST: "/soap/notes",
+    DETAIL: (id: string) => `/soap/notes/${id}`,
+    UPDATE: (id: string) => `/soap/notes/${id}`,
+    DELETE: (id: string) => `/soap/notes/${id}`,
     EXTRACT_PII: "/ai/pii/extract",
     EXTRACT_NER: "/ai/ner/extract",
   },

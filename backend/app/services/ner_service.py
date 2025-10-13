@@ -215,7 +215,7 @@ class NERService:
         return normalized
 
     def _extract_entities_via_openai(self, text: str) -> list:
-        """Call OpenAI-style LLM to extract entities. Placeholder implementation.
+        """Call OpenAI-style LLM to extract entities using new openai>=1.0.0 API.
 
         This function expects OPENAI_API_KEY in env and an installed OpenAI client.
         It returns a list of dicts with keys similar to HF pipeline output.
@@ -228,19 +228,24 @@ class NERService:
         )
         user_prompt = f"Text: '''{text}'''\n\nReturn JSON with field `entities`."
 
-        # Placeholder: use environment's OpenAI client if available
         try:
-            import openai
-            openai.api_key = os.getenv("OPENAI_API_KEY")
-            resp = openai.ChatCompletion.create(
-                model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+            # Use the new openai>=1.0.0 API
+            from openai import OpenAI
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            
+            # Use the correct method: chat.completions.create
+            resp = client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.0,
             )
-            content = resp["choices"][0]["message"]["content"]
+            
+            # Extract content from the new API response format
+            content = resp.choices[0].message.content
+
         except Exception as e:
             logger.error("OpenAI LLM call failed", error=str(e))
             return []
@@ -252,22 +257,36 @@ class NERService:
         return normalized
 
     def _extract_entities_via_gemini(self, text: str) -> list:
-        """Call Google Gemini / Vertex AI to extract entities. Placeholder implementation.
+        """Call Google Gemini to extract entities using google-generativeai library.
 
-        You must configure Google credentials and the vendor client.
+        You must configure Google credentials (GOOGLE_API_KEY environment variable).
         """
         try:
-            # Example placeholder using google ai client -- adjust to your installed SDK
-            from google import generativeai
-            generativeai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-            system = (
+            import google.generativeai as genai
+            
+            # Configure the API key
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            
+            # Get the model name from environment or use default
+            model_name = os.getenv("GOOGLE_MODEL") or os.getenv("AI_SERVICE_GEMINI_MODEL") or os.getenv("GEMINI_MODEL") or "gemini-1.5-flash-latest"
+            
+            # Create the model
+            model = genai.GenerativeModel(model_name)
+            
+            # Build the prompt
+            system_instruction = (
                 "You are a biomedical entity extractor. Return JSON only with a top-level `entities` list. "
                 "Each entity must contain: type, value, start, end, confidence. "
                 "Use exact substring values and 0-based character indices."
             )
-            prompt = f"Text: '''{text}'''\n\nReturn JSON with field `entities`."
-            resp = generativeai.chat.create(model=os.getenv("GEMINI_MODEL", "gemini-mini"), messages=[{"role":"system","content":system},{"role":"user","content":prompt}], temperature=0.0)
-            content = resp.last or resp["candidates"][0]["content"]
+            user_prompt = f"{system_instruction}\n\nText: '''{text}'''\n\nReturn JSON with field `entities`."
+            
+            # Generate content
+            response = model.generate_content(user_prompt)
+            
+            # Extract the text content
+            content = response.text
+            
         except Exception as e:
             logger.error("Gemini LLM call failed", error=str(e))
             return []

@@ -42,7 +42,8 @@ def get_chat_model(temperature: float = 0.1) -> Tuple[any, ProviderType]:
         
     elif google_api_key:
         logger.info("OpenAI API key not found, using Google Gemini for chat model")
-        google_model = os.getenv("GOOGLE_MODEL", "gemini-1.5-flash")
+        # Accept both older env var names and the repo's AI_SERVICE_* convention
+        google_model = os.getenv("GOOGLE_MODEL") or os.getenv("AI_SERVICE_GEMINI_MODEL") or "gemini-1.5-flash-latest"
         model = ChatGoogleGenerativeAI(
             model=google_model,
             temperature=temperature,
@@ -80,7 +81,8 @@ def get_embedding_model() -> Tuple[any, ProviderType]:
         
     elif google_api_key:
         logger.info("OpenAI API key not found, using Google Gemini for embeddings")
-        google_embedding_model = os.getenv("GOOGLE_EMBEDDING_MODEL", "models/embedding-001")
+        # Prefer AI_SERVICE_GEMINI_EMBEDDING_MODEL if present
+        google_embedding_model = os.getenv("GOOGLE_EMBEDDING_MODEL") or os.getenv("AI_SERVICE_GEMINI_EMBEDDING_MODEL") or "models/embedding-001"
         model = GoogleGenerativeAIEmbeddings(
             model=google_embedding_model,
             google_api_key=google_api_key
