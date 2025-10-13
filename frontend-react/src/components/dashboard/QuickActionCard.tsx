@@ -6,6 +6,7 @@ import {
   Typography,
   Box,
   Button,
+  CardActionArea,
 } from "@mui/material";
 
 interface QuickActionCardProps {
@@ -25,26 +26,36 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
 }) => {
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <CardContent sx={{ flexGrow: 1 }}>
-        {icon && (
-          <Box color="primary.main" mb={2}>
-            {icon}
-          </Box>
-        )}
-        <Typography variant="h6" component="h3" gutterBottom>
-          {title}
-        </Typography>
-        {description && (
-          <Typography variant="body2" color="text.secondary">
-            {description}
+      <CardActionArea
+        onClick={onClick}
+        sx={{
+          display: "flex",
+          alignItems: "stretch",
+          flexDirection: "column",
+          flexGrow: 1,
+        }}
+      >
+        <CardContent sx={{ flexGrow: 1 }}>
+          {icon && (
+            <Box color="primary.main" mb={2}>
+              {icon}
+            </Box>
+          )}
+          <Typography variant="h6" component="h3" gutterBottom>
+            {title}
           </Typography>
-        )}
-      </CardContent>
-      <CardActions>
-        <Button size="small" onClick={onClick}>
-          {cta}
-        </Button>
-      </CardActions>
+          {description && (
+            <Typography variant="body2" color="text.secondary">
+              {description}
+            </Typography>
+          )}
+        </CardContent>
+        <CardActions sx={{ width: "100%", justifyContent: "flex-end" }}>
+          <Button size="small" component="span">
+            {cta}
+          </Button>
+        </CardActions>
+      </CardActionArea>
     </Card>
   );
 };

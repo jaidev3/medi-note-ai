@@ -1,6 +1,6 @@
 # MediNote AI - AI-Powered SOAP Note Generation System
 
-**An intelligent healthcare documentation platform for hearing care professionals**
+**An intelligent healthcare documentation platform for medical professionals**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)](docker-compose.unified.yaml)

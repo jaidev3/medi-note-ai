@@ -13,6 +13,7 @@ import {
   IconButton,
   CircularProgress,
   Alert,
+  ButtonBase,
 } from "@mui/material";
 import Logo from "@/components/Logo";
 import {
@@ -208,33 +209,48 @@ export const DashboardPage: React.FC = () => {
               <Grid container spacing={2}>
                 {sessions.sessions.map((s: any) => (
                   <Grid item xs={12} md={6} key={s.session_id}>
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      px={1}
-                      py={1.5}
-                      borderRadius={2}
-                      sx={{ bgcolor: "background.paper" }}
+                    <ButtonBase
+                      onClick={() => navigate(`/sessions/${s.session_id}`)}
+                      sx={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        borderRadius: 2,
+                      }}
+                      focusRipple
                     >
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight={600}>
-                          Session {s.session_id.slice(0, 6)} •{" "}
-                          {new Date(
-                            s.visit_date ?? s.created_at
-                          ).toLocaleDateString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Docs: {s.document_count} • SOAP: {s.soap_note_count}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        onClick={() => navigate(`/sessions/${s.session_id}`)}
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        px={1}
+                        py={1.5}
+                        borderRadius={2}
+                        sx={{ bgcolor: "background.paper" }}
                       >
-                        Open
-                      </Button>
-                    </Box>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            Session {s.session_id.slice(0, 6)} •{" "}
+                            {new Date(
+                              s.visit_date ?? s.created_at
+                            ).toLocaleDateString()}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Docs: {s.document_count} • SOAP: {s.soap_note_count}
+                          </Typography>
+                        </Box>
+                        <span
+                          style={{
+                            cursor: "pointer",
+                            fontSize: "0.875rem",
+                            color: "#1976d2",
+                          }}
+                          onClick={() => navigate(`/sessions/${s.session_id}`)}
+                        >
+                          Open
+                        </span>
+                      </Box>
+                    </ButtonBase>
                   </Grid>
                 ))}
               </Grid>
