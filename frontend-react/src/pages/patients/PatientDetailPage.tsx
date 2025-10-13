@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  AppBar,
-  Toolbar,
   Typography,
-  IconButton,
   Button,
   Container,
   Paper,
@@ -23,7 +20,7 @@ import {
   TableBody,
   Pagination,
 } from "@mui/material";
-import { ArrowBack, Delete } from "@mui/icons-material";
+import { Delete } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useGetPatient,
@@ -45,7 +42,7 @@ const formatDateTime = (value?: string | null) => {
 export const PatientDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { patientId } = useParams();
-  const { logout } = useAuth();
+  useAuth();
 
   const {
     data: patient,
@@ -149,21 +146,7 @@ export const PatientDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate(-1)}>
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, ml: 2 }}>
-            Patient Details
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
-
+    <div>
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         {patientLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>

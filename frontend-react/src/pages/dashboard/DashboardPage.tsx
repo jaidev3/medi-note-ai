@@ -3,19 +3,16 @@ import { useNavigate } from "react-router-dom";
 import {
   Container,
   Box,
-  AppBar,
-  Toolbar,
   Typography,
   Button,
   Grid,
   Card,
   CardContent,
-  IconButton,
   CircularProgress,
   Alert,
   ButtonBase,
 } from "@mui/material";
-import Logo from "@/components/Logo";
+import Navbar from "@/components/Navbar";
 import {
   Description,
   People,
@@ -23,7 +20,6 @@ import {
   CloudUpload,
   Search,
   Assessment,
-  Logout,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetUserStats } from "@/hooks/useUsersApi";
@@ -35,7 +31,7 @@ import { EmptyState } from "@/components/EmptyState";
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  useAuth();
   const {
     data: stats,
     isLoading: statsLoading,
@@ -88,39 +84,9 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppBar position="static" color="transparent" elevation={0}>
-        <Toolbar>
-          <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
-            <Box sx={{ mr: 2, display: "flex", alignItems: "center" }}>
-              <Logo width={36} height={36} aria-hidden={false} />
-            </Box>
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{ fontWeight: "bold" }}
-            >
-              MediNote AI
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
-            {user?.email}
-          </Typography>
-          <IconButton color="primary" onClick={logout}>
-            <Logout />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+      <Navbar />
 
       <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
-        <Box mb={3}>
-          <Typography variant="h4" component="h1" fontWeight={800} gutterBottom>
-            Hey{user?.name ? `, ${user.name}` : ""} 👋
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Here’s a quick overview and shortcuts to your daily tasks.
-          </Typography>
-        </Box>
-
         {/* Stats Overview */}
         {statsLoading ? (
           <Box display="flex" justifyContent="center" my={4}>

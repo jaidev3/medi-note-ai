@@ -1,10 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AppBar,
-  Toolbar,
   Typography,
-  IconButton,
   Button,
   Container,
   Paper,
@@ -13,13 +10,12 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { ArrowBack } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreatePatient } from "@/hooks/usePatientsApi";
 
 export const NewPatientPage: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  useAuth();
   const createPatientMutation = useCreatePatient();
 
   const [formState, setFormState] = useState({
@@ -63,19 +59,7 @@ export const NewPatientPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate(-1)}>
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, ml: 2 }}>
-            New Patient
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+      {/* Header provided by Layout */}
 
       <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 4 }}>

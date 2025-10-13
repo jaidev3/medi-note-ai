@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// navigation not needed; header provided by Layout
 import {
   Container,
   Box,
-  AppBar,
-  Toolbar,
   Typography,
   Button,
   Paper,
   TextField,
-  IconButton,
   Alert,
   CircularProgress,
   FormControl,
@@ -22,8 +19,7 @@ import {
   FormControlLabel,
   Stack,
 } from "@mui/material";
-import { ArrowBack, Send } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
+import { Send } from "@mui/icons-material";
 import { useGenerateSOAPNote, useUpdateSOAPNote } from "@/hooks/useSoapApi";
 import { useListSessions } from "@/hooks/useSessionsApi";
 import {
@@ -45,9 +41,6 @@ const cloneSoapNote = (note: SOAPNote): SOAPNote =>
   JSON.parse(JSON.stringify(note));
 
 export const SOAPGeneratePage: React.FC = () => {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
-
   const [transcript, setTranscript] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [includeContext, setIncludeContext] = useState(true);
@@ -274,24 +267,6 @@ export const SOAPGeneratePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, ml: 2 }}>
-            Generate SOAP Notes
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
-
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {formError && (
           <Alert severity="warning" sx={{ mb: 2 }}>

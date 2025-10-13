@@ -1,15 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// navigation not required; layout provides header
 import {
   Container,
   Box,
-  AppBar,
-  Toolbar,
   Typography,
   Button,
   Paper,
   TextField,
-  IconButton,
   Alert,
   CircularProgress,
   List,
@@ -27,8 +24,7 @@ import {
   Checkbox,
   Divider,
 } from "@mui/material";
-import { ArrowBack, Search } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
+import { Search } from "@mui/icons-material";
 import {
   useQueryKnowledgeBase,
   useGenerateEmbeddings,
@@ -40,11 +36,12 @@ import {
   useEmbedApprovedNotes,
 } from "@/hooks/useRagApi";
 import { useListPatients } from "@/hooks/usePatientsApi";
+import { useAuth } from "@/hooks/useAuth";
 import { useListSessions } from "@/hooks/useSessionsApi";
 
 export const RAGQueryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
+  // navigation isn't used by this page header (Layout provides Navbar)
+  useAuth();
   const [query, setQuery] = useState("");
   const [patientId, setPatientId] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -111,24 +108,6 @@ export const RAGQueryPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, ml: 2 }}>
-            Query Documents
-          </Typography>
-          <Button color="inherit" onClick={logout}>
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
-
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 4 }}>
           <Typography variant="h5" component="h1" gutterBottom>

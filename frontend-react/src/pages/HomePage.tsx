@@ -5,13 +5,11 @@ import {
   Box,
   Button,
   Typography,
-  AppBar,
-  Toolbar,
   Card,
   CardContent,
   Grid,
 } from "@mui/material";
-import Logo from "@/components/Logo";
+// Layout provides the shared Navbar
 import {
   Description,
   Search,
@@ -83,32 +81,6 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <AppBar position="static" color="transparent" elevation={1}>
-        <Toolbar>
-          <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
-            <Box sx={{ mr: 2, display: "flex", alignItems: "center" }}>
-              <Logo width={40} height={40} aria-hidden={false} />
-            </Box>
-            <Typography
-              variant="h5"
-              component="div"
-              sx={{ fontWeight: "bold" }}
-            >
-              MediNote AI
-            </Typography>
-          </Box>
-          <Box display="flex" gap={2}>
-            <Button variant="outlined" onClick={() => navigate("/login")}>
-              Login
-            </Button>
-            <Button variant="contained" onClick={() => navigate("/register")}>
-              Register
-            </Button>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
       {/* Hero Section */}
       <Box className="bg-gradient-to-br from-blue-50 to-indigo-100" py={12}>
         <Container maxWidth="lg">
