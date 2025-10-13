@@ -44,7 +44,7 @@ export const SOAPGeneratePage: React.FC = () => {
 
     try {
       const result = await generateMutation.mutateAsync({
-        transcript,
+        text: transcript,
         session_id: sessionId || undefined,
       });
       setGeneratedNote(result);
