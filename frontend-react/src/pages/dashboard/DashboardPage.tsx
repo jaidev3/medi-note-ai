@@ -20,6 +20,7 @@ import {
   CloudUpload,
   Search,
   Assessment,
+  AdminPanelSettings,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetUserStats } from "@/hooks/useUsersApi";
@@ -79,6 +80,12 @@ export const DashboardPage: React.FC = () => {
       description: "View and manage application settings",
       icon: <Assessment fontSize="large" />,
       path: "/settings",
+    },
+    {
+      title: "Admin Dashboard",
+      description: "Manage users, patients, and system settings",
+      icon: <AdminPanelSettings fontSize="large" />,
+      path: "/admin",
     },
   ];
 

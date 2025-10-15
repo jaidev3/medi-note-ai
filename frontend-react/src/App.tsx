@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
+import Layout from "./layouts/Layout";
 
 // Pages
 import { HomePage } from "./pages/HomePage";
@@ -18,6 +18,7 @@ import { SessionDetailPage } from "./pages/sessions/SessionDetailPage";
 import { SOAPGeneratePage } from "./pages/soap/SOAPGeneratePage";
 import { RAGQueryPage } from "./pages/rag/RAGQueryPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 
 function App() {
   return (
@@ -116,6 +117,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboardPage />
                 </ProtectedRoute>
               }
             />
