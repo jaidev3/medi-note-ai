@@ -56,15 +56,18 @@ const Navbar: React.FC<Props> = ({ rightActions }) => {
   return (
     <AppBar position="sticky" color="inherit" elevation={0}>
       <Toolbar>
-        <Box display="flex" alignItems="center" sx={{ flexGrow: 1 }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          sx={{ flexGrow: 1, cursor: "pointer" }}
+          onClick={() => navigate("/")}
+        >
           <Box
             sx={{
               mr: 2,
               display: "flex",
               alignItems: "center",
-              cursor: "pointer",
             }}
-            onClick={() => navigate("/")}
           >
             <Logo width={36} height={36} aria-hidden={false} />
           </Box>

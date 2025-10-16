@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-// navigation not required; layout provides header
+import React, { useState, useRef, useEffect } from "react";
 import {
   Container,
   Box,
@@ -9,69 +8,51 @@ import {
   TextField,
   Alert,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  Card,
-  CardContent,
   Chip,
   Stack,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  FormControlLabel,
-  Checkbox,
-  Divider,
+  Avatar,
 } from "@mui/material";
-import { Search } from "@mui/icons-material";
 import {
-  useQueryKnowledgeBase,
-  useGenerateEmbeddings,
-  useBatchEmbedSOAPNotes,
-  useFindSimilarNotes,
-  useSearchRAGBySimilarity,
-  useRagEmbeddingStats,
-  useNotesNeedingEmbedding,
-  useEmbedApprovedNotes,
-} from "@/hooks/useRagApi";
+  Send as SendIcon,
+  ClearAll as ClearAllIcon,
+  FileDownload as FileDownloadIcon,
+} from "@mui/icons-material";
+import { useQueryKnowledgeBase } from "@/hooks/useRagApi";
 import { useListPatients } from "@/hooks/usePatientsApi";
-import { useAuth } from "@/hooks/useAuth";
 import { useListSessions } from "@/hooks/useSessionsApi";
+import { useAuth } from "@/hooks/useAuth";
+
+interface Message {
+  id: string;
+  type: "user" | "assistant";
+  content: string;
+  timestamp?: number;
+  sources?: Array<{
+    chunk_id: string;
+    content: string;
+    similarity_score: number;
+    source_type: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  metadata?: {
+    confidence?: number;
+    processing_time?: number;
+  };
+}
 
 export const RAGQueryPage: React.FC = () => {
-  // navigation isn't used by this page header (Layout provides Navbar)
   useAuth();
-  const [query, setQuery] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState("");
   const [patientId, setPatientId] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [topK, setTopK] = useState(5);
-
-  const [embedNoteId, setEmbedNoteId] = useState("");
-  const [forceReembedSingle, setForceReembedSingle] = useState(false);
-  const [batchNoteIdsInput, setBatchNoteIdsInput] = useState("");
-  const [batchSessionId, setBatchSessionId] = useState("");
-  const [batchPatientId, setBatchPatientId] = useState("");
-  const [batchForceReembed, setBatchForceReembed] = useState(false);
-  const [similarNoteId, setSimilarNoteId] = useState("");
-  const [similarTopK, setSimilarTopK] = useState(5);
-  const [similarityQuery, setSimilarityQuery] = useState("");
-  const [similarityTopK, setSimilarityTopK] = useState(5);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.7);
-  const [embeddingStatsPatientId, setEmbeddingStatsPatientId] = useState("");
-  const [needsNoteIdsInput, setNeedsNoteIdsInput] = useState("");
-  const [needsSessionId, setNeedsSessionId] = useState("");
-  const [needsPatientId, setNeedsPatientId] = useState("");
-  const [embedApprovedForce, setEmbedApprovedForce] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const queryMutation = useQueryKnowledgeBase();
-  const embedMutation = useGenerateEmbeddings();
-  const batchEmbedMutation = useBatchEmbedSOAPNotes();
-  const similarMutation = useFindSimilarNotes();
-  const similaritySearchMutation = useSearchRAGBySimilarity();
-  const statsMutation = useRagEmbeddingStats();
-  const notesNeedingMutation = useNotesNeedingEmbedding();
-  const embedApprovedMutation = useEmbedApprovedNotes();
   const { data: patientsData } = useListPatients(1, 100);
   const { data: sessionsData } = useListSessions(
     1,
@@ -79,57 +60,150 @@ export const RAGQueryPage: React.FC = () => {
     patientId || undefined
   );
 
-  const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error ? error.message : fallback;
-  const formatLabel = (label: string) =>
-    label
-      .split("_")
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(" ");
-
   const patients = patientsData?.patients || [];
   const sessions = sessionsData?.sessions || [];
 
-  const handleSearch = async () => {
-    if (!query.trim()) {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) {
       return;
     }
 
-    await queryMutation.mutateAsync({
-      query,
-      patient_id: patientId || undefined,
-      session_id: sessionId || undefined,
-      top_k: topK,
-    });
+    if (!patientId) {
+      alert("Please select a patient first");
+      return;
+    }
+
+    // Add user message to chat
+    const now = Date.now();
+    const userMessageId = `msg-${now}`;
+    const userMessage: Message = {
+      id: userMessageId,
+      type: "user",
+      content: inputMessage,
+      timestamp: now,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
+
+    // Query the knowledge base
+    try {
+      const response = await queryMutation.mutateAsync({
+        query: inputMessage,
+        patient_id: patientId,
+        session_id: sessionId || undefined,
+        top_k: 5,
+      });
+
+      // Add assistant message with answer
+      const assistantMessage: Message = {
+        id: `msg-${Date.now() + 1}`,
+        type: "assistant",
+        content: response.answer || "I couldn't find a relevant answer.",
+        sources: response.retrieved_chunks || [],
+        timestamp: Date.now(),
+        metadata: {
+          confidence: response.confidence,
+          processing_time: response.processing_time,
+        },
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage: Message = {
+        id: `msg-${Date.now() + 1}`,
+        type: "assistant",
+        content: `I encountered an error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   };
 
-  const results = queryMutation.data?.retrieved_chunks || [];
-  const answer = queryMutation.data?.answer || "";
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
-            Search Patient Documents
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col">
+      <Container
+        maxWidth="md"
+        sx={{ display: "flex", flexDirection: "column", flex: 1, py: 3 }}
+      >
+        {/* Header */}
+        <Paper sx={{ p: 3, mb: 3, boxShadow: 1 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontWeight: 600, mb: 2 }}
+          >
+            Ask About Patient Records
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select a patient and ask any question about their medical history,
+            visits, or notes
           </Typography>
 
-          {queryMutation.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {queryMutation.error.message}
-            </Alert>
-          )}
-
-          <Stack spacing={2} sx={{ mb: 3 }}>
-            <Box display="flex" gap={2}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Patient (Optional)</InputLabel>
+          {/* Selected patient/session chips */}
+          <Box
+            sx={{
+              mb: 2,
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            {patientId && (
+              <Chip
+                label={
+                  patients.find((p) => p.id === patientId)?.name || "Patient"
+                }
+                color="primary"
+                size="small"
+              />
+            )}
+            {sessionId && (
+              <Chip
+                label={
+                  sessions.find((s) => s.session_id === sessionId)?.visit_date
+                    ? new Date(
+                        sessions.find(
+                          (s) => s.session_id === sessionId
+                        )!.visit_date
+                      ).toLocaleDateString()
+                    : "Session"
+                }
+                size="small"
+              />
+            )}
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{display:"flex", gap: 2 }}>
+              <FormControl fullWidth sx={{ maxWidth: 400 }}>
+                <InputLabel>Select Patient</InputLabel>
                 <Select
                   value={patientId}
-                  onChange={(e) => setPatientId(e.target.value)}
-                  label="Patient (Optional)"
+                  onChange={(e) => {
+                    setPatientId(e.target.value);
+                    setSessionId(""); // Clear session when changing patient
+                    setMessages([]); // Clear chat when switching patients
+                  }}
+                  label="Select Patient"
                 >
-                  <MenuItem value="">All Patients</MenuItem>
+                  <MenuItem value="">Choose a patient...</MenuItem>
                   {patients.map((patient) => (
                     <MenuItem key={patient.id} value={patient.id}>
                       {patient.name}
@@ -138,11 +212,14 @@ export const RAGQueryPage: React.FC = () => {
                 </Select>
               </FormControl>
 
-              <FormControl sx={{ minWidth: 200 }}>
+              <FormControl fullWidth sx={{ maxWidth: 400}}>
                 <InputLabel>Session (Optional)</InputLabel>
                 <Select
                   value={sessionId}
-                  onChange={(e) => setSessionId(e.target.value)}
+                  onChange={(e) => {
+                    setSessionId(e.target.value);
+                    setMessages([]); // Clear chat when switching sessions
+                  }}
                   label="Session (Optional)"
                   disabled={!patientId}
                 >
@@ -157,608 +234,304 @@ export const RAGQueryPage: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
-
-              <FormControl sx={{ minWidth: 120 }}>
-                <InputLabel>Top K</InputLabel>
-                <Select
-                  value={topK}
-                  onChange={(e) => setTopK(Number(e.target.value))}
-                  label="Top K"
-                >
-                  <MenuItem value={3}>3</MenuItem>
-                  <MenuItem value={5}>5</MenuItem>
-                  <MenuItem value={10}>10</MenuItem>
-                  <MenuItem value={20}>20</MenuItem>
-                </Select>
-              </FormControl>
             </Box>
 
-            <Box display="flex" gap={2}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Button
+                variant="outlined"
+                startIcon={<ClearAllIcon />}
+                onClick={() => setMessages([])}
+                disabled={messages.length === 0}
+              >
+                Clear Chat
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<FileDownloadIcon />}
+                onClick={() => {
+                  const text = messages
+                    .map((m) => {
+                      const time = m.timestamp
+                        ? new Date(m.timestamp).toLocaleString()
+                        : "";
+                      return `[${time}] ${m.type === "user" ? "User" : "AI"}: ${
+                        m.content
+                      }`;
+                    })
+                    .join("\n\n");
+                  const blob = new Blob([text], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${patientId || "chat"}-transcript.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                disabled={messages.length === 0}
+              >
+                Download Transcript
+              </Button>
+            </Stack>
+          </Box>
+        </Paper>
+
+        {/* Chat Area */}
+        <Paper
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: 2,
+            mb: 2,
+          }}
+        >
+          {/* Messages */}
+          <Box
+            sx={{
+              flex: 1,
+              overflowY: "auto",
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              backgroundColor: "#fafafa",
+            }}
+          >
+            {messages.length === 0 ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  color: "text.secondary",
+                }}
+              >
+                <Typography variant="body1" textAlign="center">
+                  {patientId
+                    ? "Start a conversation! Ask me anything about this patient's records."
+                    : "Select a patient to begin"}
+                </Typography>
+              </Box>
+            ) : (
+              messages.map((message) => (
+                <Box
+                  key={message.id}
+                  sx={{
+                    display: "flex",
+                    justifyContent:
+                      message.type === "user" ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1.5,
+                      maxWidth: "85%",
+                      flexDirection:
+                        message.type === "user" ? "row-reverse" : "row",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor:
+                          message.type === "user"
+                            ? "primary.main"
+                            : "success.main",
+                      }}
+                    >
+                      {message.type === "user" ? "U" : "AI"}
+                    </Avatar>
+                    <Box>
+                      <Paper
+                        sx={{
+                          p: 2,
+                          bgcolor:
+                            message.type === "user"
+                              ? "primary.main"
+                              : "grey.100",
+                          color:
+                            message.type === "user" ? "white" : "text.primary",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ whiteSpace: "pre-wrap" }}
+                        >
+                          {message.content}
+                        </Typography>
+
+                        {/* Confidence & Processing Time */}
+                        {message.metadata && (
+                          <Box
+                            sx={{
+                              mt: 1.5,
+                              display: "flex",
+                              gap: 1,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {message.metadata.confidence !== undefined && (
+                              <Chip
+                                label={`Confidence: ${(
+                                  message.metadata.confidence * 100
+                                ).toFixed(0)}%`}
+                                size="small"
+                                sx={{
+                                  bgcolor:
+                                    message.type === "user"
+                                      ? "rgba(255,255,255,0.2)"
+                                      : "rgba(0,0,0,0.1)",
+                                  color:
+                                    message.type === "user"
+                                      ? "white"
+                                      : "inherit",
+                                }}
+                              />
+                            )}
+                            {message.metadata.processing_time !== undefined && (
+                              <Chip
+                                label={`${message.metadata.processing_time.toFixed(
+                                  2
+                                )}s`}
+                                size="small"
+                                sx={{
+                                  bgcolor:
+                                    message.type === "user"
+                                      ? "rgba(255,255,255,0.2)"
+                                      : "rgba(0,0,0,0.1)",
+                                  color:
+                                    message.type === "user"
+                                      ? "white"
+                                      : "inherit",
+                                }}
+                              />
+                            )}
+                          </Box>
+                        )}
+
+                        {/* Timestamp */}
+                        {message.timestamp && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mt: 1 }}
+                          >
+                            {new Date(message.timestamp).toLocaleString()}
+                          </Typography>
+                        )}
+                      </Paper>
+
+                      {/* Source Chunks */}
+                      {message.sources && message.sources.length > 0 && (
+                        <Box sx={{ mt: 1.5 }}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", mb: 1 }}
+                          >
+                            📄 {message.sources.length} source
+                            {message.sources.length !== 1 ? "s" : ""}
+                          </Typography>
+                          {message.sources.map((source) => (
+                            <Paper
+                              key={source.chunk_id}
+                              variant="outlined"
+                              sx={{
+                                p: 1.5,
+                                mb: 1,
+                                bgcolor: "white",
+                                borderColor: "divider",
+                                "&:hover": { boxShadow: 1 },
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ mb: 1, lineHeight: 1.5 }}
+                              >
+                                {source.content}
+                              </Typography>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{ flexWrap: "wrap" }}
+                              >
+                                <Chip
+                                  label={`Score: ${(
+                                    source.similarity_score * 100
+                                  ).toFixed(1)}%`}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                                <Chip
+                                  label={source.source_type}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </Stack>
+                            </Paper>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </Box>
+
+          {/* Input Area */}
+          <Box
+            sx={{
+              p: 2,
+              borderTop: 1,
+              borderColor: "divider",
+              backgroundColor: "white",
+            }}
+          >
+            {queryMutation.error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {queryMutation.error.message}
+              </Alert>
+            )}
+            <Stack direction="row" spacing={1}>
               <TextField
                 fullWidth
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ask a question about patient records..."
-                variant="outlined"
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Ask a question..."
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) =>
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  (e.preventDefault(), handleSendMessage())
+                }
+                multiline
+                maxRows={3}
+                disabled={!patientId || queryMutation.isPending}
+                size="small"
               />
               <Button
                 variant="contained"
-                onClick={handleSearch}
-                disabled={queryMutation.isPending || !query.trim()}
-                startIcon={
-                  queryMutation.isPending ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    <Search />
-                  )
+                onClick={handleSendMessage}
+                disabled={
+                  !patientId || queryMutation.isPending || !inputMessage.trim()
                 }
+                sx={{ alignSelf: "flex-end" }}
               >
-                Search
+                {queryMutation.isPending ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <SendIcon />
+                )}
               </Button>
-            </Box>
-          </Stack>
-
-          {answer && (
-            <Card sx={{ mb: 3, bgcolor: "primary.light" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Answer
-                </Typography>
-                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                  {answer}
-                </Typography>
-                {queryMutation.data && (
-                  <Box sx={{ mt: 2 }}>
-                    <Chip
-                      label={`Confidence: ${(
-                        (queryMutation.data.confidence ?? 0) * 100
-                      ).toFixed(0)}%`}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    />
-                    <Chip
-                      label={`${queryMutation.data.total_chunks_found} chunks found`}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    />
-                    <Chip
-                      label={`${(
-                        queryMutation.data.processing_time ?? 0
-                      ).toFixed(2)}s`}
-                      size="small"
-                    />
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {results.length > 0 && (
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Source Chunks ({results.length})
-              </Typography>
-              <List>
-                {results.map((result) => (
-                  <ListItem key={result.chunk_id} divider>
-                    <ListItemText
-                      primary={
-                        <Box>
-                          <Typography variant="body2" component="span">
-                            {result.content}
-                          </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            <Chip
-                              label={`Score: ${(
-                                result.similarity_score * 100
-                              ).toFixed(1)}%`}
-                              size="small"
-                              color="primary"
-                              sx={{ mr: 1 }}
-                            />
-                            <Chip
-                              label={result.source_type}
-                              size="small"
-                              sx={{ mr: 1 }}
-                            />
-                            {result.metadata && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                component="span"
-                              >
-                                {JSON.stringify(result.metadata)}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-        </Paper>
-
-        <Paper sx={{ p: 4, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Find Similar SOAP Notes
-          </Typography>
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <TextField
-              label="Reference note ID"
-              value={similarNoteId}
-              onChange={(e) => setSimilarNoteId(e.target.value)}
-              fullWidth
-              placeholder="UUID of note to compare"
-            />
-            <TextField
-              label="Top K"
-              type="number"
-              value={similarTopK}
-              onChange={(e) =>
-                setSimilarTopK(
-                  Math.min(50, Math.max(1, Number(e.target.value) || 1))
-                )
-              }
-              inputProps={{ min: 1, max: 50 }}
-              sx={{ maxWidth: 200 }}
-            />
-            <Button
-              variant="contained"
-              onClick={() =>
-                similarMutation.mutate({
-                  noteId: similarNoteId.trim(),
-                  topK: similarTopK,
-                })
-              }
-              disabled={!similarNoteId.trim() || similarMutation.isPending}
-            >
-              {similarMutation.isPending
-                ? "Searching..."
-                : "Find similar notes"}
-            </Button>
-            {similarMutation.error && (
-              <Alert severity="error">
-                {getErrorMessage(
-                  similarMutation.error,
-                  "Failed to find similar notes."
-                )}
-              </Alert>
-            )}
-            {similarMutation.data && (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">
-                  {similarMutation.data.similar_notes.length} matches · Compared{" "}
-                  {similarMutation.data.total_compared}
-                </Typography>
-                {similarMutation.data.similar_notes.map((note) => (
-                  <Paper key={note.chunk_id} variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                      {note.content}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Score: {(note.similarity_score * 100).toFixed(1)}%
-                    </Typography>
-                  </Paper>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </Paper>
-
-        <Paper sx={{ p: 4, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Search by Text Similarity
-          </Typography>
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <TextField
-              label="Query text"
-              multiline
-              minRows={3}
-              value={similarityQuery}
-              onChange={(e) => setSimilarityQuery(e.target.value)}
-              placeholder="Describe the case to find similar notes"
-            />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Top K"
-                type="number"
-                value={similarityTopK}
-                onChange={(e) =>
-                  setSimilarityTopK(
-                    Math.min(20, Math.max(1, Number(e.target.value) || 1))
-                  )
-                }
-                inputProps={{ min: 1, max: 20 }}
-              />
-              <TextField
-                label="Similarity threshold"
-                type="number"
-                value={similarityThreshold}
-                onChange={(e) =>
-                  setSimilarityThreshold(
-                    Math.min(1, Math.max(0, Number(e.target.value) || 0))
-                  )
-                }
-                inputProps={{ min: 0, max: 1, step: 0.05 }}
-              />
             </Stack>
-            <Button
-              variant="contained"
-              onClick={() =>
-                similaritySearchMutation.mutate({
-                  query_text: similarityQuery.trim(),
-                  top_k: similarityTopK,
-                  similarity_threshold: similarityThreshold,
-                })
-              }
-              disabled={
-                !similarityQuery.trim() || similaritySearchMutation.isPending
-              }
-            >
-              {similaritySearchMutation.isPending
-                ? "Searching..."
-                : "Search notes"}
-            </Button>
-            {similaritySearchMutation.error && (
-              <Alert severity="error">
-                {getErrorMessage(
-                  similaritySearchMutation.error,
-                  "Similarity search failed."
-                )}
-              </Alert>
-            )}
-            {similaritySearchMutation.data && (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">
-                  {similaritySearchMutation.data.similar_notes.length} matches ·
-                  Processed in {similaritySearchMutation.data.processing_time}s
-                </Typography>
-                {similaritySearchMutation.data.similar_notes.map((note) => (
-                  <Paper
-                    key={`${note.chunk_id}-${note.source_id}`}
-                    variant="outlined"
-                    sx={{ p: 2 }}
-                  >
-                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                      {note.content}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Score: {(note.similarity_score * 100).toFixed(1)}%
-                    </Typography>
-                  </Paper>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </Paper>
-
-        <Paper sx={{ p: 4, mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Embedding Actions
-          </Typography>
-          <Stack spacing={3} sx={{ mt: 2 }}>
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Embed single SOAP note
-              </Typography>
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                alignItems={{ xs: "stretch", md: "center" }}
-              >
-                <TextField
-                  label="Note ID"
-                  value={embedNoteId}
-                  onChange={(e) => setEmbedNoteId(e.target.value)}
-                  fullWidth
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={forceReembedSingle}
-                      onChange={(e) => setForceReembedSingle(e.target.checked)}
-                    />
-                  }
-                  label="Force re-embed"
-                />
-                <Button
-                  variant="contained"
-                  onClick={() =>
-                    embedMutation.mutate({
-                      note_id: embedNoteId.trim(),
-                      force_reembed: forceReembedSingle,
-                    })
-                  }
-                  disabled={!embedNoteId.trim() || embedMutation.isPending}
-                >
-                  {embedMutation.isPending ? "Embedding..." : "Embed note"}
-                </Button>
-              </Stack>
-              {embedMutation.error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {getErrorMessage(
-                    embedMutation.error,
-                    "Failed to embed note."
-                  )}
-                </Alert>
-              )}
-              {embedMutation.data && (
-                <Alert
-                  severity={embedMutation.data.success ? "success" : "warning"}
-                  sx={{ mt: 2 }}
-                >
-                  {embedMutation.data.message} · Embedded{" "}
-                  {embedMutation.data.embedded_count}
-                </Alert>
-              )}
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Batch embed SOAP notes
-              </Typography>
-              <Stack spacing={2}>
-                <TextField
-                  label="Note IDs (comma separated)"
-                  value={batchNoteIdsInput}
-                  onChange={(e) => setBatchNoteIdsInput(e.target.value)}
-                  placeholder="id-1,id-2"
-                  fullWidth
-                />
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <TextField
-                    label="Session ID (optional)"
-                    value={batchSessionId}
-                    onChange={(e) => setBatchSessionId(e.target.value)}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Patient ID (optional)"
-                    value={batchPatientId}
-                    onChange={(e) => setBatchPatientId(e.target.value)}
-                    fullWidth
-                  />
-                </Stack>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={batchForceReembed}
-                      onChange={(e) => setBatchForceReembed(e.target.checked)}
-                    />
-                  }
-                  label="Force re-embed existing vectors"
-                />
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    const noteIds = batchNoteIdsInput
-                      .split(",")
-                      .map((id) => id.trim())
-                      .filter(Boolean);
-
-                    batchEmbedMutation.mutate({
-                      note_ids: noteIds.length ? noteIds : undefined,
-                      session_id: batchSessionId.trim() || undefined,
-                      patient_id: batchPatientId.trim() || undefined,
-                      force_reembed: batchForceReembed,
-                    });
-                  }}
-                  disabled={batchEmbedMutation.isPending}
-                >
-                  {batchEmbedMutation.isPending
-                    ? "Submitting..."
-                    : "Start batch embedding"}
-                </Button>
-                {batchEmbedMutation.error && (
-                  <Alert severity="error">
-                    {getErrorMessage(
-                      batchEmbedMutation.error,
-                      "Batch embedding failed."
-                    )}
-                  </Alert>
-                )}
-                {batchEmbedMutation.data && (
-                  <Alert
-                    severity={
-                      batchEmbedMutation.data.success ? "success" : "warning"
-                    }
-                  >
-                    {batchEmbedMutation.data.message} · Embedded{" "}
-                    {batchEmbedMutation.data.embedded_count}, Skipped{" "}
-                    {batchEmbedMutation.data.skipped_count}
-                  </Alert>
-                )}
-              </Stack>
-            </Box>
-          </Stack>
-        </Paper>
-
-        <Paper sx={{ p: 4, mt: 3, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Embedding Maintenance
-          </Typography>
-          <Stack spacing={3} sx={{ mt: 2 }}>
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Embedding statistics
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField
-                  label="Patient ID (optional)"
-                  value={embeddingStatsPatientId}
-                  onChange={(e) => setEmbeddingStatsPatientId(e.target.value)}
-                />
-                <Button
-                  variant="contained"
-                  onClick={() =>
-                    statsMutation.mutate({
-                      patientId: embeddingStatsPatientId.trim() || undefined,
-                    })
-                  }
-                  disabled={statsMutation.isPending}
-                >
-                  {statsMutation.isPending ? "Fetching..." : "Get stats"}
-                </Button>
-              </Stack>
-              {statsMutation.error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                  {getErrorMessage(
-                    statsMutation.error,
-                    "Failed to fetch embedding stats."
-                  )}
-                </Alert>
-              )}
-              {statsMutation.data && (
-                <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                  <Stack spacing={0.5}>
-                    {Object.entries(statsMutation.data).map(([key, value]) => (
-                      <Typography variant="body2" key={key}>
-                        <strong>{formatLabel(key)}:</strong> {String(value)}
-                      </Typography>
-                    ))}
-                  </Stack>
-                </Paper>
-              )}
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Notes needing embedding
-              </Typography>
-              <Stack spacing={2}>
-                <TextField
-                  label="Note IDs (comma separated)"
-                  value={needsNoteIdsInput}
-                  onChange={(e) => setNeedsNoteIdsInput(e.target.value)}
-                  placeholder="optional"
-                />
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <TextField
-                    label="Session ID"
-                    value={needsSessionId}
-                    onChange={(e) => setNeedsSessionId(e.target.value)}
-                  />
-                  <TextField
-                    label="Patient ID"
-                    value={needsPatientId}
-                    onChange={(e) => setNeedsPatientId(e.target.value)}
-                  />
-                </Stack>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      const noteIds = needsNoteIdsInput
-                        .split(",")
-                        .map((id) => id.trim())
-                        .filter(Boolean);
-
-                      notesNeedingMutation.mutate({
-                        note_ids: noteIds.length ? noteIds : undefined,
-                        session_id: needsSessionId.trim() || undefined,
-                        patient_id: needsPatientId.trim() || undefined,
-                      });
-                    }}
-                    disabled={notesNeedingMutation.isPending}
-                  >
-                    {notesNeedingMutation.isPending
-                      ? "Checking..."
-                      : "Show pending notes"}
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={() => {
-                      const noteIds = needsNoteIdsInput
-                        .split(",")
-                        .map((id) => id.trim())
-                        .filter(Boolean);
-
-                      embedApprovedMutation.mutate({
-                        note_ids: noteIds.length ? noteIds : undefined,
-                        session_id: needsSessionId.trim() || undefined,
-                        patient_id: needsPatientId.trim() || undefined,
-                        force_reembed: embedApprovedForce,
-                      });
-                    }}
-                    disabled={embedApprovedMutation.isPending}
-                  >
-                    {embedApprovedMutation.isPending
-                      ? "Triggering..."
-                      : "Embed approved notes"}
-                  </Button>
-                </Stack>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={embedApprovedForce}
-                      onChange={(e) => setEmbedApprovedForce(e.target.checked)}
-                    />
-                  }
-                  label="Force re-embed approved notes"
-                />
-                {notesNeedingMutation.error && (
-                  <Alert severity="error">
-                    {getErrorMessage(
-                      notesNeedingMutation.error,
-                      "Failed to fetch pending notes."
-                    )}
-                  </Alert>
-                )}
-                {notesNeedingMutation.data && (
-                  <Stack spacing={1}>
-                    {notesNeedingMutation.data.length === 0 ? (
-                      <Alert severity="success">
-                        All approved notes are embedded.
-                      </Alert>
-                    ) : (
-                      notesNeedingMutation.data.map((note) => (
-                        <Paper
-                          key={note.note_id}
-                          variant="outlined"
-                          sx={{ p: 2 }}
-                        >
-                          <Typography variant="body2">
-                            Note {note.note_id} · Session{" "}
-                            {note.session_id || "—"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Approved: {note.user_approved ? "Yes" : "No"} · AI
-                            approved: {note.ai_approved ? "Yes" : "No"}
-                          </Typography>
-                        </Paper>
-                      ))
-                    )}
-                  </Stack>
-                )}
-                {embedApprovedMutation.error && (
-                  <Alert severity="error">
-                    {getErrorMessage(
-                      embedApprovedMutation.error,
-                      "Failed to trigger embeddings."
-                    )}
-                  </Alert>
-                )}
-                {embedApprovedMutation.data && (
-                  <Alert
-                    severity={
-                      embedApprovedMutation.data.success ? "success" : "warning"
-                    }
-                  >
-                    {embedApprovedMutation.data.message} · Embedded{" "}
-                    {embedApprovedMutation.data.embedded_count}
-                  </Alert>
-                )}
-              </Stack>
-            </Box>
-          </Stack>
+          </Box>
         </Paper>
       </Container>
     </div>
