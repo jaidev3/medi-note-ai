@@ -62,26 +62,55 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      }}
+    >
       <Container maxWidth="md">
         <Box textAlign="center" mb={4}>
-          <Box display="flex" justifyContent="center" mb={1}>
+          <Box
+            display="flex"
+            justifyContent="center"
+            mb={2}
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.1)",
+              borderRadius: "50%",
+              width: 80,
+              height: 80,
+              mx: "auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Logo width={64} height={64} aria-hidden={false} />
           </Box>
           <Typography
-            variant="h3"
+            variant="h4"
             component="h1"
-            fontWeight="bold"
+            fontWeight={800}
             gutterBottom
+            sx={{ color: "white" }}
           >
             MediNote AI
           </Typography>
-          <Typography variant="h6" color="text.secondary">
+          <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.9)" }}>
             Create your account
           </Typography>
         </Box>
 
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            backgroundColor: "white",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
+        >
           <form onSubmit={handleSubmit(onSubmit)}>
             <Box display="flex" flexDirection="column" gap={3}>
               {error && <Alert severity="error">{error}</Alert>}
@@ -100,6 +129,13 @@ export const RegisterPage: React.FC = () => {
                         autoFocus
                         error={!!errors.name}
                         helperText={errors.name?.message}
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -125,6 +161,13 @@ export const RegisterPage: React.FC = () => {
                         autoComplete="email"
                         error={!!errors.email}
                         helperText={errors.email?.message}
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -150,12 +193,20 @@ export const RegisterPage: React.FC = () => {
                         autoComplete="new-password"
                         error={!!errors.password}
                         helperText={errors.password?.message}
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
                               <IconButton
                                 onClick={() => setShowPassword(!showPassword)}
                                 edge="end"
+                                sx={{ color: "#667eea" }}
                               >
                                 {showPassword ? (
                                   <VisibilityOff />
@@ -184,6 +235,13 @@ export const RegisterPage: React.FC = () => {
                         label="Role"
                         error={!!errors.role}
                         helperText={errors.role?.message}
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       >
                         {ROLES.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -204,6 +262,13 @@ export const RegisterPage: React.FC = () => {
                         {...field}
                         fullWidth
                         label="Department (Optional)"
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -218,6 +283,13 @@ export const RegisterPage: React.FC = () => {
                         {...field}
                         fullWidth
                         label="Employee ID (Optional)"
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -232,6 +304,13 @@ export const RegisterPage: React.FC = () => {
                         {...field}
                         fullWidth
                         label="Phone Number (Optional)"
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 2,
+                            "&:hover fieldset": { borderColor: "#667eea" },
+                          },
+                        }}
                       />
                     )}
                   />
@@ -245,7 +324,18 @@ export const RegisterPage: React.FC = () => {
                 fullWidth
                 disabled={isLoading}
                 startIcon={<PersonAdd />}
-                sx={{ py: 1.5 }}
+                sx={{
+                  py: 1.5,
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  fontSize: "1rem",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
                 {isLoading ? "Creating account..." : "Create Account"}
               </Button>

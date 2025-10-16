@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -13,9 +13,10 @@ import {
   Button,
   ListItemIcon,
 } from "@mui/material";
-import { Logout, Settings, Person, Login, AppRegistration } from "@mui/icons-material";
+import { Logout, Settings, Login, AppRegistration } from "@mui/icons-material";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthModals } from "@/contexts/AuthModalsContext";
 
 type Props = {
   rightActions?: React.ReactNode;
@@ -24,6 +25,7 @@ type Props = {
 const Navbar: React.FC<Props> = ({ rightActions }) => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, loading } = useAuth();
+  const { openLoginModal, openSignupModal } = useAuthModals();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -77,7 +79,10 @@ const Navbar: React.FC<Props> = ({ rightActions }) => {
           <>
             {loading ? null : isAuthenticated ? (
               <Box display="flex" alignItems="center" sx={{ gap: 1.5 }}>
-                <Box textAlign="right" sx={{ display: { xs: "none", sm: "block" } }}>
+                <Box
+                  textAlign="right"
+                  sx={{ display: { xs: "none", sm: "block" } }}
+                >
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {user?.name || "My Account"}
                   </Typography>
@@ -91,24 +96,20 @@ const Navbar: React.FC<Props> = ({ rightActions }) => {
                   aria-label="account menu"
                   size="large"
                 >
-                  <Avatar sx={{ width: 36, height: 36 }}>
-                    {userInitial}
-                  </Avatar>
+                  <Avatar sx={{ width: 36, height: 36 }}>{userInitial}</Avatar>
                 </IconButton>
               </Box>
             ) : (
               <Box display="flex" alignItems="center" sx={{ gap: 1 }}>
                 <Button
-                  component={RouterLink}
-                  to="/login"
+                  onClick={openLoginModal}
                   color="primary"
                   startIcon={<Login />}
                 >
                   Log in
                 </Button>
                 <Button
-                  component={RouterLink}
-                  to="/register"
+                  onClick={openSignupModal}
                   variant="contained"
                   startIcon={<AppRegistration />}
                 >

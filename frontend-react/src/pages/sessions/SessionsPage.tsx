@@ -24,12 +24,14 @@ import { Add } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { useListSessions, useDeleteSession } from "@/hooks/useSessionsApi";
 import { useListPatients } from "@/hooks/usePatientsApi";
+import { AddSessionModal } from "@/components/modals/AddSessionModal";
 
 export const SessionsPage: React.FC = () => {
   const navigate = useNavigate();
   useAuth();
   const [page, setPage] = useState(1);
   const [patientFilter, setPatientFilter] = useState<string>("");
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
 
   const { data, isLoading, error } = useListSessions(
     page,
@@ -65,29 +67,45 @@ export const SessionsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="lg" sx={{ mt: 5, mb: 4 }}>
         <Box
           sx={{
-            mb: 3,
+            mb: 4,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 2,
           }}
         >
-          <Typography variant="h5" component="h1">
-            Patient Visit Sessions
-          </Typography>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight={800}>
+              Patient Visit Sessions
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Manage and track patient visits and sessions.
+            </Typography>
+          </Box>
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate("/sessions/new")}
+            onClick={() => setIsAddSessionModalOpen(true)}
+            sx={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              fontWeight: 700,
+              textTransform: "none",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+              },
+              transition: "all 0.3s ease",
+            }}
           >
             New Session
           </Button>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 4 }}>
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Filter by Patient</InputLabel>
             <Select
@@ -97,6 +115,12 @@ export const SessionsPage: React.FC = () => {
                 setPage(1);
               }}
               label="Filter by Patient"
+              sx={{
+                borderRadius: 2,
+                "& .MuiOutlinedInput-root": {
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
             >
               <MenuItem value="">All Patients</MenuItem>
               {patients.map((patient) => (
@@ -117,8 +141,16 @@ export const SessionsPage: React.FC = () => {
             Failed to load sessions: {error.message}
           </Alert>
         ) : sessions.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: "center" }}>
-            <Typography color="text.secondary">
+          <Paper
+            sx={{
+              p: 5,
+              textAlign: "center",
+              borderRadius: 3,
+              border: "1px solid #e8ebf8",
+              backgroundColor: "white",
+            }}
+          >
+            <Typography color="text.secondary" variant="h6" fontWeight={700}>
               {patientFilter
                 ? "No sessions found for this patient"
                 : "No sessions yet. Create your first session!"}
@@ -126,16 +158,35 @@ export const SessionsPage: React.FC = () => {
           </Paper>
         ) : (
           <>
-            <TableContainer component={Paper}>
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid #e8ebf8",
+                boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+              }}
+            >
               <Table>
                 <TableHead>
-                  <TableRow>
-                    <TableCell>Session ID</TableCell>
-                    <TableCell>Patient ID</TableCell>
-                    <TableCell>Visit Date</TableCell>
-                    <TableCell>Documents</TableCell>
-                    <TableCell>SOAP Notes</TableCell>
-                    <TableCell>Actions</TableCell>
+                  <TableRow sx={{ backgroundColor: "#f8f9ff" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Session ID
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Patient
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Visit Date
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Documents
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      SOAP Notes
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Actions
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -143,7 +194,13 @@ export const SessionsPage: React.FC = () => {
                     <TableRow
                       key={session.session_id}
                       hover
-                      sx={{ cursor: "pointer" }}
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor: "rgba(102, 126, 234, 0.04)",
+                        },
+                        transition: "background-color 0.2s ease",
+                      }}
                       onClick={(e) => {
                         if (
                           !(e.target as HTMLElement).closest(".action-button")
@@ -152,14 +209,20 @@ export const SessionsPage: React.FC = () => {
                         }
                       }}
                     >
-                      <TableCell>{session.session_id}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                        {session.session_id.slice(0, 12)}...
+                      </TableCell>
                       <TableCell>
                         {patientNameMap.get(session.patient_id) ||
                           session.patient_id}
                       </TableCell>
                       <TableCell>{formatDate(session.visit_date)}</TableCell>
-                      <TableCell>{session.document_count}</TableCell>
-                      <TableCell>{session.soap_note_count}</TableCell>
+                      <TableCell sx={{ textAlign: "center" }}>
+                        {session.document_count}
+                      </TableCell>
+                      <TableCell sx={{ textAlign: "center" }}>
+                        {session.soap_note_count}
+                      </TableCell>
                       <TableCell>
                         <Button
                           className="action-button"
@@ -169,6 +232,7 @@ export const SessionsPage: React.FC = () => {
                             handleDeleteSession(session.session_id)
                           }
                           disabled={deleteSessionMutation.isPending}
+                          sx={{ fontWeight: 600 }}
                         >
                           Delete
                         </Button>
@@ -192,6 +256,12 @@ export const SessionsPage: React.FC = () => {
           </>
         )}
       </Container>
+
+      <AddSessionModal
+        open={isAddSessionModalOpen}
+        onClose={() => setIsAddSessionModalOpen(false)}
+        onSuccess={() => window.location.reload()}
+      />
     </div>
   );
 };

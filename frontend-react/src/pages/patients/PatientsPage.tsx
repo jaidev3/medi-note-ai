@@ -22,6 +22,7 @@ import {
 import { Add, Search } from "@mui/icons-material";
 // Layout provides the shared Navbar
 import { useListPatients } from "@/hooks/usePatientsApi";
+import { AddPatientModal } from "@/components/modals/AddPatientModal";
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ export const PatientsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useListPatients(
     page,
@@ -58,21 +60,21 @@ export const PatientsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="lg" sx={{ mt: 5, mb: 4 }}>
         <Box
           display="flex"
           flexDirection={{ xs: "column", md: "row" }}
           justifyContent="space-between"
           alignItems={{ xs: "stretch", md: "center" }}
-          gap={2}
-          mb={3}
+          gap={3}
+          mb={4}
         >
           <Box>
-            <Typography variant="h5" component="h1">
+            <Typography variant="h4" component="h1" fontWeight={800}>
               Patient Records
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               Search, review, and update your patient roster.
             </Typography>
           </Box>
@@ -82,16 +84,32 @@ export const PatientsPage: React.FC = () => {
               placeholder="Search by name or email"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  backgroundColor: "white",
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
               InputProps={{
-                startAdornment: (
-                  <Search sx={{ mr: 1, color: "action.active" }} />
-                ),
+                startAdornment: <Search sx={{ mr: 1, color: "#667eea" }} />,
               }}
             />
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate("/patients/new")}
+              onClick={() => setIsAddPatientModalOpen(true)}
+              sx={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                fontWeight: 700,
+                textTransform: "none",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+                },
+                transition: "all 0.3s ease",
+              }}
             >
               Add Patient
             </Button>
@@ -114,9 +132,17 @@ export const PatientsPage: React.FC = () => {
             Failed to load patients. {error.message}
           </Alert>
         ) : patients.length === 0 ? (
-          <Paper sx={{ p: 5, textAlign: "center" }}>
+          <Paper
+            sx={{
+              p: 5,
+              textAlign: "center",
+              borderRadius: 3,
+              border: "1px solid #e8ebf8",
+              backgroundColor: "white",
+            }}
+          >
             <Stack spacing={2} alignItems="center">
-              <Typography variant="h6">
+              <Typography variant="h6" fontWeight={700}>
                 {debouncedSearch
                   ? "No patients match your search"
                   : "No patients yet"}
@@ -129,7 +155,18 @@ export const PatientsPage: React.FC = () => {
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={() => navigate("/patients/new")}
+                onClick={() => setIsAddPatientModalOpen(true)}
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
                 Add Patient
               </Button>
@@ -137,15 +174,32 @@ export const PatientsPage: React.FC = () => {
           </Paper>
         ) : (
           <>
-            <TableContainer component={Paper}>
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid #e8ebf8",
+                boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+              }}
+            >
               <Table>
                 <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Phone</TableCell>
-                    <TableCell>Last Visit</TableCell>
-                    <TableCell>Total Visits</TableCell>
+                  <TableRow sx={{ backgroundColor: "#f8f9ff" }}>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Name
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Email
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Phone
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Last Visit
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
+                      Total Visits
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -153,10 +207,18 @@ export const PatientsPage: React.FC = () => {
                     <TableRow
                       key={patient.id}
                       hover
-                      sx={{ cursor: "pointer" }}
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor: "rgba(102, 126, 234, 0.04)",
+                        },
+                        transition: "background-color 0.2s ease",
+                      }}
                       onClick={() => navigate(`/patients/${patient.id}`)}
                     >
-                      <TableCell>{patient.name || "Unnamed"}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        {patient.name || "Unnamed"}
+                      </TableCell>
                       <TableCell>{patient.email || "—"}</TableCell>
                       <TableCell>{patient.phone || "—"}</TableCell>
                       <TableCell>
@@ -167,12 +229,18 @@ export const PatientsPage: React.FC = () => {
                             ).toLocaleDateString()}
                             size="small"
                             variant="outlined"
+                            sx={{
+                              borderColor: "#667eea",
+                              color: "#667eea",
+                            }}
                           />
                         ) : (
                           "Not recorded"
                         )}
                       </TableCell>
-                      <TableCell>{patient.total_visits}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        {patient.total_visits}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -192,6 +260,12 @@ export const PatientsPage: React.FC = () => {
           </>
         )}
       </Container>
+
+      <AddPatientModal
+        open={isAddPatientModalOpen}
+        onClose={() => setIsAddPatientModalOpen(false)}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 };

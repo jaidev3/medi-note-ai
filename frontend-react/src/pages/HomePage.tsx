@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Container,
   Box,
@@ -13,7 +12,6 @@ import {
   Divider,
   Chip,
 } from "@mui/material";
-// Layout provides the shared Navbar
 import {
   Description,
   Search,
@@ -22,9 +20,10 @@ import {
   TrendingUp,
   IntegrationInstructions,
 } from "@mui/icons-material";
+import { useAuthModals } from "@/contexts/AuthModalsContext";
 
 export const HomePage: React.FC = () => {
-  const navigate = useNavigate();
+  const { openLoginModal, openSignupModal } = useAuthModals();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -128,37 +127,96 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <Box className="bg-gradient-to-br from-blue-50 to-indigo-100" py={{ xs: 10, md: 14 }}>
-        <Container maxWidth="lg">
+      <Box
+        sx={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          py: { xs: 12, md: 16 },
+          position: "relative",
+          overflow: "hidden",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%)",
+            pointerEvents: "none",
+          },
+        }}
+      >
+        <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Stack spacing={3}>
+              <Stack spacing={4}>
                 <Chip
-                  label="Purpose-built for audiology teams"
-                  color="primary"
-                  variant="outlined"
-                  sx={{ alignSelf: "flex-start", fontWeight: 600 }}
+                  label="✨ Purpose-built for audiology teams"
+                  sx={{
+                    alignSelf: "flex-start",
+                    fontWeight: 600,
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                  }}
                 />
-                <Typography variant="h3" component="h1" fontWeight={700}>
-                  AI-Powered SOAP Notes for Hearing Care Professionals
+                <Typography
+                  variant="h2"
+                  component="h1"
+                  fontWeight={800}
+                  sx={{ color: "white", lineHeight: 1.2 }}
+                >
+                  AI-Powered SOAP Notes for Hearing Care
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Automate documentation, stay HIPAA compliant, and give every patient more time with intelligent assistance tuned for hearing care.
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: "rgba(255,255,255,0.9)",
+                    fontWeight: 400,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Automate documentation, stay HIPAA compliant, and give every
+                  patient more time with intelligent assistance tuned for
+                  hearing care.
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     variant="contained"
                     size="large"
-                    onClick={() => navigate("/register")}
-                    sx={{ px: 4, py: 1.5 }}
+                    onClick={openSignupModal}
+                    sx={{
+                      px: 4,
+                      py: 1.5,
+                      backgroundColor: "white",
+                      color: "#667eea",
+                      fontWeight: 700,
+                      "&:hover": {
+                        backgroundColor: "#f0f0f0",
+                        transform: "translateY(-2px)",
+                      },
+                      transition: "all 0.3s ease",
+                    }}
                   >
                     Get Started
                   </Button>
                   <Button
                     variant="outlined"
                     size="large"
-                    onClick={() => navigate("/login")}
-                    sx={{ px: 4, py: 1.5 }}
+                    onClick={openLoginModal}
+                    sx={{
+                      px: 4,
+                      py: 1.5,
+                      borderColor: "rgba(255,255,255,0.5)",
+                      color: "white",
+                      fontWeight: 700,
+                      "&:hover": {
+                        borderColor: "white",
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        transform: "translateY(-2px)",
+                      },
+                      transition: "all 0.3s ease",
+                    }}
                   >
                     Sign In
                   </Button>
@@ -186,11 +244,17 @@ export const HomePage: React.FC = () => {
                   }}
                 />
                 <Stack spacing={3} sx={{ position: "relative", zIndex: 1 }}>
-                  <Typography variant="subtitle2" color="primary" fontWeight={700}>
+                  <Typography
+                    variant="subtitle2"
+                    color="primary"
+                    fontWeight={700}
+                  >
                     Live Summary Preview
                   </Typography>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    “Patient reports gradual left-ear hearing decline with intermittent tinnitus. No dizziness or pain. Recommended updated audiogram and follow-up in 4 weeks.”
+                    “Patient reports gradual left-ear hearing decline with
+                    intermittent tinnitus. No dizziness or pain. Recommended
+                    updated audiogram and follow-up in 4 weeks.”
                   </Typography>
                   <Divider sx={{ borderColor: "rgba(37, 56, 88, 0.08)" }} />
                   <Stack direction="row" spacing={3}>
@@ -202,7 +266,11 @@ export const HomePage: React.FC = () => {
                         Average note turn-around
                       </Typography>
                     </Box>
-                    <Divider flexItem orientation="vertical" sx={{ borderColor: "rgba(37, 56, 88, 0.08)" }} />
+                    <Divider
+                      flexItem
+                      orientation="vertical"
+                      sx={{ borderColor: "rgba(37, 56, 88, 0.08)" }}
+                    />
                     <Box>
                       <Typography variant="subtitle1" fontWeight={600}>
                         HIPAA & SOC 2
@@ -228,7 +296,12 @@ export const HomePage: React.FC = () => {
                     boxShadow: "0 20px 40px rgba(15, 23, 42, 0.08)",
                   }}
                 >
-                  <Typography variant="h5" fontWeight={700} color="primary" gutterBottom>
+                  <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    color="primary"
+                    gutterBottom
+                  >
                     {item.value}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -242,13 +315,20 @@ export const HomePage: React.FC = () => {
       </Box>
 
       {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 10 } }}>
-        <Box textAlign="center" mb={8}>
-          <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
-            Powerful Features for Hearing Care Professionals
+      <Container maxWidth="lg" sx={{ py: { xs: 10, md: 14 } }}>
+        <Box textAlign="center" mb={10}>
+          <Typography variant="h3" component="h2" fontWeight={800} gutterBottom>
+            Powerful Features
           </Typography>
-          <Typography variant="body1" color="text.secondary" maxWidth="760px" mx="auto">
-            Streamline your workflow with intelligent AI that understands the unique needs of audiology and hearing care.
+          <Typography
+            variant="h6"
+            color="text.secondary"
+            maxWidth="720px"
+            mx="auto"
+            sx={{ fontWeight: 400, lineHeight: 1.6 }}
+          >
+            Streamline your workflow with intelligent AI that understands the
+            unique needs of audiology and hearing care.
           </Typography>
         </Box>
 
@@ -259,24 +339,43 @@ export const HomePage: React.FC = () => {
                 elevation={0}
                 sx={{
                   height: "100%",
-                  borderRadius: 4,
+                  borderRadius: 3,
                   p: 4,
-                  bgcolor: "rgba(241, 245, 255, 0.7)",
-                  backdropFilter: "blur(6px)",
-                  border: "1px solid rgba(99,102,241,0.1)",
-                  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                  '&:hover': {
-                    transform: "translateY(-6px)",
-                    boxShadow: "0 24px 40px rgba(15, 23, 42, 0.1)",
+                  bgcolor: "#f8f9ff",
+                  border: "1px solid #e8ebf8",
+                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    transform: "translateY(-8px)",
+                    boxShadow: "0 20px 40px rgba(102, 126, 234, 0.15)",
+                    borderColor: "#667eea",
                   },
                 }}
               >
                 <CardContent sx={{ p: 0 }}>
-                  <Box mb={3}>{feature.icon}</Box>
-                  <Typography variant="subtitle1" component="h3" fontWeight={600} gutterBottom>
+                  <Box
+                    mb={3}
+                    sx={{
+                      display: "inline-flex",
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: "rgba(102, 126, 234, 0.1)",
+                    }}
+                  >
+                    {feature.icon}
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    fontWeight={700}
+                    gutterBottom
+                  >
                     {feature.title}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6 }}
+                  >
                     {feature.description}
                   </Typography>
                 </CardContent>
@@ -297,7 +396,8 @@ export const HomePage: React.FC = () => {
                 Designed for every step of patient documentation
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Give clinicians and coordinators a shared workspace that makes capturing, reviewing, and publishing notes effortless.
+                Give clinicians and coordinators a shared workspace that makes
+                capturing, reviewing, and publishing notes effortless.
               </Typography>
             </Stack>
           </Grid>
@@ -314,14 +414,22 @@ export const HomePage: React.FC = () => {
                     boxShadow: "0 12px 30px rgba(15, 23, 42, 0.06)",
                   }}
                 >
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={3} alignItems="flex-start">
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={3}
+                    alignItems="flex-start"
+                  >
                     <Chip
                       label={item.step}
                       color="primary"
                       sx={{ fontWeight: 700, borderRadius: 2 }}
                     />
                     <Box>
-                      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={600}
+                        gutterBottom
+                      >
                         {item.title}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -336,14 +444,27 @@ export const HomePage: React.FC = () => {
         </Grid>
       </Container>
 
-      <Box sx={{ bgcolor: "rgba(15,23,42,0.04)", py: { xs: 8, md: 10 } }}>
+      <Box sx={{ bgcolor: "#f8f9ff", py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
-          <Box textAlign="center" mb={6}>
-            <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
+          <Box textAlign="center" mb={8}>
+            <Typography
+              variant="h3"
+              component="h2"
+              fontWeight={800}
+              gutterBottom
+            >
               Loved by leading hearing care teams
             </Typography>
-            <Typography variant="body2" color="text.secondary" maxWidth="720px" mx="auto">
-              Clinics around the world rely on MediNote AI to stay ahead of documentation backlogs while delivering exceptional patient experiences.
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              maxWidth="720px"
+              mx="auto"
+              sx={{ fontWeight: 400, lineHeight: 1.6 }}
+            >
+              Clinics around the world rely on MediNote AI to stay ahead of
+              documentation backlogs while delivering exceptional patient
+              experiences.
             </Typography>
           </Box>
           <Grid container spacing={4}>
@@ -352,20 +473,37 @@ export const HomePage: React.FC = () => {
                 <Card
                   elevation={0}
                   sx={{
-                    borderRadius: 4,
+                    borderRadius: 3,
                     p: 4,
                     bgcolor: "white",
-                    border: "1px solid rgba(15,23,42,0.06)",
-                    boxShadow: "0 20px 45px rgba(15,23,42,0.08)",
+                    border: "1px solid #e8ebf8",
+                    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
                     height: "100%",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      boxShadow: "0 12px 40px rgba(102, 126, 234, 0.15)",
+                      transform: "translateY(-4px)",
+                    },
                   }}
                 >
                   <Stack spacing={3}>
-                    <Typography variant="body2" color="text.primary" fontStyle="italic">
-                      “{testimonial.quote}”
+                    <Typography
+                      variant="body2"
+                      color="text.primary"
+                      fontStyle="italic"
+                      sx={{ fontSize: "1.05rem", lineHeight: 1.6 }}
+                    >
+                      "{testimonial.quote}"
                     </Typography>
+                    <Divider />
                     <Stack direction="row" spacing={2} alignItems="center">
-                      <Avatar sx={{ bgcolor: "primary.main" }}>
+                      <Avatar
+                        sx={{
+                          bgcolor:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          fontWeight: 700,
+                        }}
+                      >
                         {testimonial.name
                           .split(" ")
                           .map((value) => value[0])
@@ -373,7 +511,7 @@ export const HomePage: React.FC = () => {
                           .slice(0, 2)}
                       </Avatar>
                       <Box>
-                        <Typography variant="subtitle2" fontWeight={600}>
+                        <Typography variant="subtitle2" fontWeight={700}>
                           {testimonial.name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -390,45 +528,90 @@ export const HomePage: React.FC = () => {
       </Box>
 
       {/* CTA Section */}
-      <Box className="bg-blue-600" py={{ xs: 8, md: 10 }}>
-        <Container maxWidth="md">
-          <Box
-            textAlign="center"
-            sx={{
-              bgcolor: "rgba(255,255,255,0.08)",
-              borderRadius: 5,
-              p: { xs: 5, md: 7 },
-              boxShadow: "0 28px 60px rgba(15, 23, 42, 0.18)",
-            }}
-          >
+      <Box
+        sx={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          py: { xs: 10, md: 14 },
+          position: "relative",
+          overflow: "hidden",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
+            pointerEvents: "none",
+          },
+        }}
+      >
+        <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
+          <Box textAlign="center">
             <Typography
-              variant="h4"
+              variant="h3"
               component="h2"
-              fontWeight={700}
+              fontWeight={800}
               color="white"
               gutterBottom
             >
-              Ready to Get Started?
+              Ready to Transform Your Documentation?
             </Typography>
-            <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.85)" }} mb={4}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: "rgba(255,255,255,0.9)",
+                fontWeight: 400,
+                mb: 4,
+                lineHeight: 1.6,
+              }}
+            >
               Join the future of hearing care documentation today.
             </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center">
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              justifyContent="center"
+            >
               <Button
                 variant="contained"
                 size="large"
-                onClick={() => navigate("/register")}
-                sx={{ bgcolor: "white", color: "primary.main", px: 4, py: 1.5 }}
+                onClick={openSignupModal}
+                sx={{
+                  bgcolor: "white",
+                  color: "#667eea",
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  "&:hover": {
+                    backgroundColor: "#f0f0f0",
+                    transform: "translateY(-2px)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
-                Get Started
+                Get Started Free
               </Button>
               <Button
                 variant="outlined"
                 size="large"
-                onClick={() => navigate("/login")}
-                sx={{ borderColor: "rgba(255,255,255,0.6)", color: "white", px: 4, py: 1.5 }}
+                onClick={openLoginModal}
+                sx={{
+                  borderColor: "rgba(255,255,255,0.5)",
+                  color: "white",
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  "&:hover": {
+                    borderColor: "white",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    transform: "translateY(-2px)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
-                Request a Demo
+                Sign In
               </Button>
             </Stack>
           </Box>

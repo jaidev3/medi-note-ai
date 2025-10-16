@@ -90,8 +90,8 @@ export const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="lg" sx={{ mt: 5, mb: 6 }}>
         {/* Stats Overview */}
         {statsLoading ? (
           <Box display="flex" justifyContent="center" my={4}>
@@ -102,7 +102,7 @@ export const DashboardPage: React.FC = () => {
             Failed to load statistics
           </Alert>
         ) : stats ? (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid container spacing={3} sx={{ mb: 6 }}>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 label="Total Patients"
@@ -142,7 +142,7 @@ export const DashboardPage: React.FC = () => {
           title="Quick actions"
           subtitle="Jump right into common workflows"
         />
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={3} sx={{ mb: 6 }}>
           {menuItems.map((item, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <QuickActionCard
@@ -163,12 +163,23 @@ export const DashboardPage: React.FC = () => {
               variant="outlined"
               size="small"
               onClick={() => navigate("/sessions")}
+              sx={{
+                borderColor: "#667eea",
+                color: "#667eea",
+                "&:hover": { backgroundColor: "rgba(102, 126, 234, 0.08)" },
+              }}
             >
               View all
             </Button>
           }
         />
-        <Card>
+        <Card
+          sx={{
+            borderRadius: 3,
+            border: "1px solid #e8ebf8",
+            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+          }}
+        >
           <CardContent>
             {sessionsLoading ? (
               <Box display="flex" justifyContent="center" my={3}>

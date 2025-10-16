@@ -1,20 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  Typography,
-  Button,
-  Container,
-  Paper,
-  Box,
-  CircularProgress,
-  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
-  MenuItem,
+  Alert,
+  CircularProgress,
+  Button,
+  Box,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
 } from "@mui/material";
-import { useAuth } from "@/hooks/useAuth";
 import { useListPatients } from "@/hooks/usePatientsApi";
 import { useCreateSession } from "@/hooks/useSessionsApi";
 
@@ -24,9 +23,17 @@ const toLocalInputValue = (date: Date) => {
   return shifted.toISOString().slice(0, 16);
 };
 
-export const NewSessionPage: React.FC = () => {
-  const navigate = useNavigate();
-  useAuth();
+interface AddSessionModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export const AddSessionModal: React.FC<AddSessionModalProps> = ({
+  open,
+  onClose,
+  onSuccess,
+}) => {
   const {
     data: patientsData,
     isLoading: patientsLoading,
@@ -43,7 +50,7 @@ export const NewSessionPage: React.FC = () => {
 
   const patients = useMemo(() => patientsData?.patients ?? [], [patientsData]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
 
@@ -59,34 +66,57 @@ export const NewSessionPage: React.FC = () => {
         notes: notes.trim() ? notes.trim() : undefined,
       };
 
-      const session = await createSessionMutation.mutateAsync(payload);
-      navigate(`/sessions/${session.session_id}`);
+      await createSessionMutation.mutateAsync(payload);
+
+      // Reset form
+      setPatientId("");
+      setVisitDate(toLocalInputValue(new Date()));
+      setNotes("");
+      setFormError(null);
+
+      onClose();
+      onSuccess?.();
     } catch (error: any) {
       const message = error?.message || "Failed to create session";
       setFormError(message);
     }
   };
 
-  return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
-      <Container maxWidth="sm" sx={{ mt: 6, mb: 6 }}>
-        <Paper
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            border: "1px solid #e8ebf8",
-            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
-          }}
-        >
-          <Typography variant="h5" component="h1" fontWeight={800} gutterBottom>
-            Create Patient Visit Session
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Record a new patient visit session.
-          </Typography>
+  const handleClose = () => {
+    setPatientId("");
+    setVisitDate(toLocalInputValue(new Date()));
+    setNotes("");
+    setFormError(null);
+    onClose();
+  };
 
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.15)",
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          fontWeight: 800,
+          fontSize: "1.25rem",
+          pb: 1,
+        }}
+      >
+        Create Patient Visit Session
+      </DialogTitle>
+
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
           {patientsLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
               <CircularProgress />
             </Box>
           ) : patientsError ? (
@@ -98,14 +128,14 @@ export const NewSessionPage: React.FC = () => {
               No patients found. Add a patient before creating a session.
             </Alert>
           ) : (
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <Box component="form" onSubmit={handleSubmit} id="add-session-form">
               {formError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   {formError}
                 </Alert>
               )}
 
-              <FormControl fullWidth sx={{ mb: 3 }}>
+              <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
                 <InputLabel id="patient-select-label">Patient</InputLabel>
                 <Select
                   labelId="patient-select-label"
@@ -113,8 +143,9 @@ export const NewSessionPage: React.FC = () => {
                   label="Patient"
                   onChange={(event) => setPatientId(event.target.value)}
                   required
+                  disabled={createSessionMutation.isPending}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     "& .MuiOutlinedInput-root": {
                       "&:hover fieldset": { borderColor: "#667eea" },
                     },
@@ -137,9 +168,10 @@ export const NewSessionPage: React.FC = () => {
                 onChange={(event) => setVisitDate(event.target.value)}
                 InputLabelProps={{ shrink: true }}
                 variant="outlined"
+                disabled={createSessionMutation.isPending}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
+                    borderRadius: 1,
                     "&:hover fieldset": { borderColor: "#667eea" },
                   },
                 }}
@@ -149,65 +181,58 @@ export const NewSessionPage: React.FC = () => {
                 label="Session Notes"
                 fullWidth
                 multiline
-                minRows={4}
+                minRows={3}
                 margin="normal"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Add optional notes about the visit"
                 variant="outlined"
+                disabled={createSessionMutation.isPending}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
+                    borderRadius: 1,
                     "&:hover fieldset": { borderColor: "#667eea" },
                   },
                 }}
               />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mt: 4,
-                  gap: 2,
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate(-1)}
-                  sx={{
-                    borderColor: "#e8ebf8",
-                    color: "#667eea",
-                    fontWeight: 600,
-                    "&:hover": { backgroundColor: "rgba(102, 126, 234, 0.04)" },
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  disabled={createSessionMutation.isPending}
-                  sx={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    fontWeight: 700,
-                    textTransform: "none",
-                    "&:hover": {
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
-                    },
-                    transition: "all 0.3s ease",
-                  }}
-                >
-                  {createSessionMutation.isPending
-                    ? "Creating..."
-                    : "Create Session"}
-                </Button>
-              </Box>
             </Box>
           )}
-        </Paper>
-      </Container>
-    </div>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2, gap: 1 }}>
+        <Button
+          onClick={handleClose}
+          disabled={createSessionMutation.isPending || patientsLoading}
+          sx={{
+            color: "#667eea",
+            fontWeight: 600,
+            "&:hover": { backgroundColor: "rgba(102, 126, 234, 0.04)" },
+          }}
+        >
+          Cancel
+        </Button>
+        {patients.length > 0 && (
+          <Button
+            type="submit"
+            form="add-session-form"
+            variant="contained"
+            disabled={createSessionMutation.isPending}
+            sx={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              fontWeight: 700,
+              textTransform: "none",
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+              },
+              transition: "all 0.3s ease",
+            }}
+          >
+            {createSessionMutation.isPending ? "Creating..." : "Create Session"}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
   );
 };

@@ -266,8 +266,17 @@ export const SOAPGeneratePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="lg" sx={{ mt: 5, mb: 6 }}>
+        <Box mb={4}>
+          <Typography variant="h4" component="h1" fontWeight={800} gutterBottom>
+            Generate SOAP Notes
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Create AI-powered SOAP notes from patient transcripts.
+          </Typography>
+        </Box>
+
         {formError && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {formError}
@@ -316,7 +325,15 @@ export const SOAPGeneratePage: React.FC = () => {
           </Alert>
         )}
 
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            border: "1px solid #e8ebf8",
+            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+          }}
+        >
           <Stack
             spacing={2}
             direction={{ xs: "column", md: "row" }}
