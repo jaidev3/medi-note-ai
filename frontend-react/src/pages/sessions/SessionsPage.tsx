@@ -91,7 +91,6 @@ export const SessionsPage: React.FC = () => {
             startIcon={<Add />}
             onClick={() => setIsAddSessionModalOpen(true)}
             sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               fontWeight: 700,
               textTransform: "none",
               "&:hover": {

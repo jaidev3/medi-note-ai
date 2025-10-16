@@ -54,9 +54,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      }}
+      style={{}}
     >
       <Container maxWidth="sm">
         <Box textAlign="center" mb={4}>
@@ -188,7 +186,7 @@ export const LoginPage: React.FC = () => {
                 startIcon={<LoginIcon />}
                 sx={{
                   py: 1.5,
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+
                   fontWeight: 700,
                   textTransform: "none",
                   fontSize: "1rem",

@@ -201,7 +201,7 @@ export const LoginModal: React.FC = () => {
               startIcon={<LoginIcon />}
               sx={{
                 py: 1.5,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+
                 fontWeight: 700,
                 textTransform: "none",
                 fontSize: "1rem",

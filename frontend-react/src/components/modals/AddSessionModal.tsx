@@ -219,7 +219,6 @@ export const AddSessionModal: React.FC<AddSessionModalProps> = ({
             variant="contained"
             disabled={createSessionMutation.isPending}
             sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               fontWeight: 700,
               textTransform: "none",
               "&:hover": {

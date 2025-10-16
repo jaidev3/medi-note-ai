@@ -19,6 +19,9 @@ import {
   Speed,
   TrendingUp,
   IntegrationInstructions,
+  Bolt,
+  AutoAwesome,
+  AccessTime,
 } from "@mui/icons-material";
 import { useAuthModals } from "@/contexts/AuthModalsContext";
 
@@ -83,9 +86,24 @@ export const HomePage: React.FC = () => {
   ];
 
   const stats = [
-    { value: "12x", label: "Faster Documentation" },
-    { value: "98%", label: "Accuracy in Transcripts" },
-    { value: "24/7", label: "Intelligent Assistance" },
+    {
+      value: "12x",
+      label: "Faster Documentation",
+      description: "Complete SOAP notes in minutes instead of hours.",
+      icon: <Bolt color="primary" fontSize="large" />,
+    },
+    {
+      value: "98%",
+      label: "Accuracy in Transcripts",
+      description: "Clinical terminology tuned for audiology workflows.",
+      icon: <AutoAwesome color="primary" fontSize="large" />,
+    },
+    {
+      value: "24/7",
+      label: "Intelligent Assistance",
+      description: "Always-available co-pilot for every patient visit.",
+      icon: <AccessTime color="primary" fontSize="large" />,
+    },
   ];
 
   const workflow = [
@@ -129,21 +147,10 @@ export const HomePage: React.FC = () => {
       {/* Hero Section */}
       <Box
         sx={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           py: { xs: 12, md: 16 },
           position: "relative",
           overflow: "hidden",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background:
-              "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%)",
-            pointerEvents: "none",
-          },
+          backgroundColor: "#f8f9ff",
         }}
       >
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
@@ -155,26 +162,22 @@ export const HomePage: React.FC = () => {
                   sx={{
                     alignSelf: "flex-start",
                     fontWeight: 600,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.3)",
+                    backgroundColor: "#e0e7ff",
+                    color: "#4338ca",
+                    border: "none",
                   }}
                 />
                 <Typography
                   variant="h2"
                   component="h1"
                   fontWeight={800}
-                  sx={{ color: "white", lineHeight: 1.2 }}
+                  sx={{ color: "#1f2937", lineHeight: 1.2 }}
                 >
                   AI-Powered SOAP Notes for Hearing Care
                 </Typography>
                 <Typography
                   variant="h6"
-                  sx={{
-                    color: "rgba(255,255,255,0.9)",
-                    fontWeight: 400,
-                    lineHeight: 1.6,
-                  }}
+                  sx={{ color: "#4b5563", fontWeight: 400, lineHeight: 1.6 }}
                 >
                   Automate documentation, stay HIPAA compliant, and give every
                   patient more time with intelligent assistance tuned for
@@ -188,11 +191,11 @@ export const HomePage: React.FC = () => {
                     sx={{
                       px: 4,
                       py: 1.5,
-                      backgroundColor: "white",
-                      color: "#667eea",
+                      backgroundColor: "#4f46e5",
+                      color: "white",
                       fontWeight: 700,
                       "&:hover": {
-                        backgroundColor: "#f0f0f0",
+                        backgroundColor: "#4338ca",
                         transform: "translateY(-2px)",
                       },
                       transition: "all 0.3s ease",
@@ -207,12 +210,12 @@ export const HomePage: React.FC = () => {
                     sx={{
                       px: 4,
                       py: 1.5,
-                      borderColor: "rgba(255,255,255,0.5)",
-                      color: "white",
+                      borderColor: "#4338ca",
+                      color: "#4338ca",
                       fontWeight: 700,
                       "&:hover": {
-                        borderColor: "white",
-                        backgroundColor: "rgba(255,255,255,0.1)",
+                        borderColor: "#312e81",
+                        backgroundColor: "rgba(79,70,229,0.08)",
                         transform: "translateY(-2px)",
                       },
                       transition: "all 0.3s ease",
@@ -220,6 +223,28 @@ export const HomePage: React.FC = () => {
                   >
                     Sign In
                   </Button>
+                </Stack>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.5}
+                  flexWrap="wrap"
+                >
+                  {[
+                    "HIPAA & SOC 2",
+                    "End-to-end encryption",
+                    "Audit-ready logs",
+                  ].map((badge) => (
+                    <Chip
+                      key={badge}
+                      label={badge}
+                      sx={{
+                        bgcolor: "white",
+                        color: "#4338ca",
+                        border: "1px solid #c7d2fe",
+                        fontWeight: 600,
+                      }}
+                    />
+                  ))}
                 </Stack>
               </Stack>
             </Grid>
@@ -229,21 +254,12 @@ export const HomePage: React.FC = () => {
                   position: "relative",
                   bgcolor: "background.paper",
                   borderRadius: 6,
-                  p: 4,
-                  boxShadow: "0 40px 80px rgba(37, 56, 88, 0.18)",
+                  p: { xs: 3.5, md: 4 },
+                  boxShadow: "0 24px 50px rgba(79, 70, 229, 0.15)",
                   overflow: "hidden",
                 }}
               >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "radial-gradient(circle at top left, rgba(59,130,246,0.15), transparent 55%), radial-gradient(circle at bottom right, rgba(99,102,241,0.2), transparent 60%)",
-                    zIndex: 0,
-                  }}
-                />
-                <Stack spacing={3} sx={{ position: "relative", zIndex: 1 }}>
+                <Stack spacing={3}>
                   <Typography
                     variant="subtitle2"
                     color="primary"
@@ -291,21 +307,32 @@ export const HomePage: React.FC = () => {
                   sx={{
                     bgcolor: "white",
                     borderRadius: 4,
-                    p: 3,
-                    textAlign: "center",
-                    boxShadow: "0 20px 40px rgba(15, 23, 42, 0.08)",
+                    p: 3.5,
+                    textAlign: "left",
+                    border: "1px solid #e0e7ff",
+                    boxShadow: "0 18px 32px rgba(148, 163, 184, 0.18)",
                   }}
                 >
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    {item.icon}
+                    <Box>
+                      <Typography variant="h5" fontWeight={700} color="primary">
+                        {item.value}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "#4b5563" }}>
+                        {item.label}
+                      </Typography>
+                    </Box>
+                  </Stack>
                   <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    color="primary"
-                    gutterBottom
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      mt: 2,
+                      color: "#6b7280",
+                    }}
                   >
-                    {item.value}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {item.label}
+                    {item.description}
                   </Typography>
                 </Box>
               </Grid>
@@ -342,12 +369,12 @@ export const HomePage: React.FC = () => {
                   borderRadius: 3,
                   p: 4,
                   bgcolor: "#f8f9ff",
-                  border: "1px solid #e8ebf8",
-                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                  border: "1px solid #e0e7ff",
+                  transition: "all 0.3s ease",
                   "&:hover": {
-                    transform: "translateY(-8px)",
-                    boxShadow: "0 20px 40px rgba(102, 126, 234, 0.15)",
-                    borderColor: "#667eea",
+                    transform: "translateY(-6px)",
+                    boxShadow: "0 16px 32px rgba(102, 126, 234, 0.18)",
+                    borderColor: "#818cf8",
                   },
                 }}
               >
@@ -412,6 +439,11 @@ export const HomePage: React.FC = () => {
                     p: 3,
                     border: "1px solid rgba(15,23,42,0.08)",
                     boxShadow: "0 12px 30px rgba(15, 23, 42, 0.06)",
+                    transition: "transform 0.2s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      borderColor: "rgba(102,126,234,0.6)",
+                    },
                   }}
                 >
                   <Stack
@@ -499,9 +531,11 @@ export const HomePage: React.FC = () => {
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar
                         sx={{
-                          bgcolor:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                           fontWeight: 700,
+                          color: "white",
+                          width: 48,
+                          height: 48,
+                          backgroundColor: "#4f46e5",
                         }}
                       >
                         {testimonial.name
@@ -530,21 +564,10 @@ export const HomePage: React.FC = () => {
       {/* CTA Section */}
       <Box
         sx={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           py: { xs: 10, md: 14 },
           position: "relative",
           overflow: "hidden",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background:
-              "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-            pointerEvents: "none",
-          },
+          backgroundColor: "#eef2ff",
         }}
       >
         <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
@@ -553,7 +576,7 @@ export const HomePage: React.FC = () => {
               variant="h3"
               component="h2"
               fontWeight={800}
-              color="white"
+              color="primary"
               gutterBottom
             >
               Ready to Transform Your Documentation?
@@ -561,7 +584,7 @@ export const HomePage: React.FC = () => {
             <Typography
               variant="h6"
               sx={{
-                color: "rgba(255,255,255,0.9)",
+                color: "#4b5563",
                 fontWeight: 400,
                 mb: 4,
                 lineHeight: 1.6,
@@ -579,13 +602,13 @@ export const HomePage: React.FC = () => {
                 size="large"
                 onClick={openSignupModal}
                 sx={{
-                  bgcolor: "white",
-                  color: "#667eea",
+                  bgcolor: "#4f46e5",
+                  color: "white",
                   fontWeight: 700,
                   px: 4,
                   py: 1.5,
                   "&:hover": {
-                    backgroundColor: "#f0f0f0",
+                    backgroundColor: "#4338ca",
                     transform: "translateY(-2px)",
                   },
                   transition: "all 0.3s ease",
@@ -598,14 +621,14 @@ export const HomePage: React.FC = () => {
                 size="large"
                 onClick={openLoginModal}
                 sx={{
-                  borderColor: "rgba(255,255,255,0.5)",
-                  color: "white",
+                  borderColor: "#4338ca",
+                  color: "#4338ca",
                   fontWeight: 700,
                   px: 4,
                   py: 1.5,
                   "&:hover": {
-                    borderColor: "white",
-                    backgroundColor: "rgba(255,255,255,0.1)",
+                    borderColor: "#312e81",
+                    backgroundColor: "rgba(79,70,229,0.08)",
                     transform: "translateY(-2px)",
                   },
                   transition: "all 0.3s ease",
