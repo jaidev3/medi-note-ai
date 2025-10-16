@@ -12,7 +12,6 @@ import {
   Alert,
   ButtonBase,
 } from "@mui/material";
-import Navbar from "@/components/Navbar";
 import {
   Description,
   People,
