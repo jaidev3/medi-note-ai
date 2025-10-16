@@ -1,20 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Typography,
-  Button,
-  Container,
-  Paper,
-  Box,
-  CircularProgress,
-  Alert,
-  TextField,
-  Grid,
-  Chip,
-  Stack,
-  Divider,
-} from "@mui/material";
-import { Delete } from "@mui/icons-material";
+import { Container, Box, CircularProgress, Alert, Stack } from "@mui/material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useGetSession,
@@ -36,7 +22,12 @@ import {
   useDocumentMetadata,
   useDocumentPiiStatus,
 } from "@/hooks/useDocumentsApi";
-import type { SOAPNoteResponse } from "@/lib";
+import {
+  SessionSummaryCard,
+  SOAPNotesSection,
+  DocumentsSection,
+  SessionDetailsForm,
+} from "@/components/sessions";
 
 const toLocalInputValue = (isoDate: string) => {
   const date = new Date(isoDate);
@@ -255,18 +246,48 @@ export const SessionDetailPage: React.FC = () => {
     }
   };
 
-  const handleShowMetadata = (documentId: string) => {
-    setMetadataDocId((prev) => (prev === documentId ? null : documentId));
+  const handleViewDocumentText = async (documentId: string) => {
+    setLoadingContentDocId(documentId);
+    try {
+      const res = await documentContentMutation.mutateAsync(documentId);
+      setViewingDocumentContent({
+        documentId: documentId,
+        content: res.content,
+      });
+      setDocumentActionMessage({
+        type: res.extracted ? "success" : "info",
+        message:
+          res.message ||
+          (res.extracted
+            ? "Extracted text loaded."
+            : "Text extraction pending; retry shortly."),
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load document content.";
+      setDocumentActionMessage({
+        type: "error",
+        message,
+      });
+    } finally {
+      setLoadingContentDocId(null);
+    }
   };
 
-  const handleShowPii = (documentId: string) => {
-    setPiiDocId((prev) => (prev === documentId ? null : documentId));
-  };
-
-  const handleClearDocumentInsights = () => {
-    setMetadataDocId(null);
-    setPiiDocId(null);
-    setDocumentActionMessage(null);
+  const handleUploadDocument = async () => {
+    if (!selectedFile || !sessionId)
+      return alert("Select a file and ensure session is available");
+    try {
+      await uploadMutation.mutateAsync({
+        file: selectedFile,
+        session_id: sessionId,
+        extract_text: extractText,
+        generate_soap: generateSoap,
+      } as any);
+      setSelectedFile(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -286,699 +307,89 @@ export const SessionDetailPage: React.FC = () => {
               <Alert severity={feedback.type}>{feedback.message}</Alert>
             )}
 
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Session Summary
-              </Typography>
-              <Grid container spacing={2}>
-                {metadata.map((item) => (
-                  <Grid item xs={12} sm={6} key={item.label}>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.label}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ wordBreak: "break-word" }}
-                    >
-                      {item.value}
-                    </Typography>
-                  </Grid>
-                ))}
-              </Grid>
+            <SessionSummaryCard
+              metadata={metadata}
+              documentCount={session.document_count}
+              soapNoteCount={session.soap_note_count}
+            />
 
-              <Divider sx={{ my: 3 }} />
-              <Stack direction="row" spacing={2}>
-                <Chip
-                  label={`Documents: ${session.document_count}`}
-                  color="primary"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`SOAP Notes: ${session.soap_note_count}`}
-                  color="primary"
-                  variant="outlined"
-                />
-              </Stack>
-            </Paper>
+            <SOAPNotesSection
+              notes={soapNotesQuery.data}
+              patientName={patient?.name}
+              isLoading={soapNotesQuery.isLoading}
+              error={soapNotesQuery.error}
+              actionFeedback={soapActionFeedback}
+              onApprove={handleApproveNote}
+              onExportPdf={handleExportNotePdf}
+              onTriggerEmbedding={handleTriggerNoteEmbedding}
+              onClearFeedback={() => setSoapActionFeedback(null)}
+              isApproving={approveSoapMutation.isPending}
+              isExporting={exportSoapPdfMutation.isPending}
+              isTriggeringEmbedding={triggerEmbeddingMutation.isPending}
+            />
 
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                SOAP Notes
-              </Typography>
+            <DocumentsSection
+              documents={sessionDocumentsQuery.data?.documents}
+              isLoading={sessionDocumentsQuery.isLoading}
+              error={sessionDocumentsQuery.error}
+              actionMessage={documentActionMessage}
+              onClearActionMessage={() => setDocumentActionMessage(null)}
+              selectedFile={selectedFile}
+              extractText={extractText}
+              generateSoap={generateSoap}
+              isUploading={uploadMutation.isPending}
+              uploadSuccess={uploadMutation.isSuccess}
+              uploadError={uploadMutation.error}
+              uploadMessage={uploadMutation.data?.message}
+              onFileSelect={setSelectedFile}
+              onUpload={handleUploadDocument}
+              onToggleExtractText={() => setExtractText((s) => !s)}
+              onToggleGenerateSoap={() => setGenerateSoap((s) => !s)}
+              processingDocumentId={processingDocumentId}
+              loadingContentDocId={loadingContentDocId}
+              onViewText={handleViewDocumentText}
+              onReprocess={handleProcessDocument}
+              metadataDocId={metadataDocId}
+              piiDocId={piiDocId}
+              onToggleMetadata={(id) =>
+                setMetadataDocId((prev) => (prev === id ? null : id))
+              }
+              onTogglePii={(id) =>
+                setPiiDocId((prev) => (prev === id ? null : id))
+              }
+              onClearInsights={() => {
+                setMetadataDocId(null);
+                setPiiDocId(null);
+                setDocumentActionMessage(null);
+              }}
+              metadataData={documentMetadataQuery.data}
+              piiData={documentPiiQuery.data}
+              isLoadingMetadata={documentMetadataQuery.isLoading}
+              isLoadingPii={documentPiiQuery.isLoading}
+              metadataError={documentMetadataQuery.error}
+              piiError={documentPiiQuery.error}
+              viewingContent={viewingDocumentContent}
+              onCloseContentViewer={() => setViewingDocumentContent(null)}
+              formatDisplayDate={formatDisplayDate}
+            />
 
-              {soapActionFeedback && (
-                <Alert
-                  severity={soapActionFeedback.type}
-                  sx={{ mb: 2 }}
-                  onClose={() => setSoapActionFeedback(null)}
-                >
-                  {soapActionFeedback.message}
-                </Alert>
-              )}
-
-              {soapNotesQuery.isLoading ? (
-                <Box sx={{ py: 2, textAlign: "center" }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : soapNotesQuery.error ? (
-                <Alert severity="error">Failed to load SOAP notes.</Alert>
-              ) : !soapNotesQuery.data || soapNotesQuery.data.length === 0 ? (
-                <Alert severity="info">
-                  No SOAP notes for this session yet.
-                </Alert>
-              ) : (
-                soapNotesQuery.data.map((note: SOAPNoteResponse) => {
-                  const shortId = note.note_id.slice(0, 8).toUpperCase();
-                  const readableCreated = new Date(
-                    note.created_at
-                  ).toLocaleString();
-
-                  return (
-                    <Box
-                      key={note.note_id}
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        border: "1px solid #eee",
-                        borderRadius: 1,
-                      }}
-                    >
-                      <Stack
-                        direction={{ xs: "column", sm: "row" }}
-                        justifyContent="space-between"
-                        alignItems={{ xs: "flex-start", sm: "center" }}
-                        spacing={1}
-                      >
-                        <Box>
-                          <Typography variant="subtitle2">
-                            {readableCreated} — Note {shortId}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            flexWrap="wrap"
-                            sx={{ mt: 1 }}
-                          >
-                            <Chip
-                              label={
-                                note.ai_approved ? "AI approved" : "AI check"
-                              }
-                              color={note.ai_approved ? "success" : "warning"}
-                              size="small"
-                            />
-                            <Chip
-                              label={
-                                note.user_approved
-                                  ? "User approved"
-                                  : "Awaiting user review"
-                              }
-                              color={note.user_approved ? "success" : "default"}
-                              size="small"
-                            />
-                            {note.context_data && (
-                              <Chip label="Context attached" size="small" />
-                            )}
-                          </Stack>
-                        </Box>
-
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() =>
-                              handleApproveNote(note.note_id, true)
-                            }
-                            disabled={approveSoapMutation.isPending}
-                          >
-                            {approveSoapMutation.isPending
-                              ? "Saving..."
-                              : "Approve"}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() =>
-                              handleApproveNote(note.note_id, false)
-                            }
-                            disabled={approveSoapMutation.isPending}
-                          >
-                            Needs edits
-                          </Button>
-                        </Stack>
-                      </Stack>
-
-                      <Stack
-                        direction={{ xs: "column", sm: "row" }}
-                        spacing={1}
-                        sx={{ mt: 1 }}
-                      >
-                        <Button
-                          size="small"
-                          onClick={() =>
-                            handleExportNotePdf(
-                              note.note_id,
-                              patient?.name || `soap-note-${shortId}`
-                            )
-                          }
-                          disabled={exportSoapPdfMutation.isPending}
-                        >
-                          {exportSoapPdfMutation.isPending
-                            ? "Exporting..."
-                            : "Export PDF"}
-                        </Button>
-                        <Button
-                          size="small"
-                          onClick={() =>
-                            handleTriggerNoteEmbedding(note.note_id)
-                          }
-                          disabled={triggerEmbeddingMutation.isPending}
-                        >
-                          {triggerEmbeddingMutation.isPending
-                            ? "Triggering..."
-                            : "Trigger embedding"}
-                        </Button>
-                      </Stack>
-
-                      {note.soap_note ? (
-                        <Grid container spacing={1} sx={{ mt: 1 }}>
-                          {Object.entries(note.soap_note).map(
-                            ([section, secData]) => (
-                              <Grid item xs={12} md={6} key={section}>
-                                <Typography variant="subtitle2">
-                                  {section.toUpperCase()}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  sx={{ whiteSpace: "pre-wrap" }}
-                                >
-                                  {/* @ts-ignore */}
-                                  {secData?.content ?? JSON.stringify(secData)}
-                                </Typography>
-                              </Grid>
-                            )
-                          )}
-                        </Grid>
-                      ) : (
-                        <Typography
-                          variant="body2"
-                          sx={{ mt: 1, whiteSpace: "pre-wrap" }}
-                        >
-                          {JSON.stringify(note.content, null, 2)}
-                        </Typography>
-                      )}
-                    </Box>
-                  );
-                })
-              )}
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Documents
-              </Typography>
-
-              {/* Upload form */}
-              <Box sx={{ mb: 2 }}>
-                <input
-                  accept=".pdf,.doc,.docx,.txt"
-                  style={{ display: "none" }}
-                  id="session-file-upload"
-                  type="file"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0])
-                      setSelectedFile(e.target.files[0]);
-                  }}
-                />
-                <label htmlFor="session-file-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    fullWidth
-                    sx={{ mb: 1 }}
-                  >
-                    Select File to Upload
-                  </Button>
-                </label>
-
-                {selectedFile && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 1 }}
-                  >
-                    Selected: {selectedFile.name} —{" "}
-                    {(selectedFile.size / 1024).toFixed(2)} KB
-                  </Typography>
-                )}
-
-                <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
-                  <Button
-                    variant="contained"
-                    onClick={async () => {
-                      if (!selectedFile || !sessionId)
-                        return alert(
-                          "Select a file and ensure session is available"
-                        );
-                      try {
-                        await uploadMutation.mutateAsync({
-                          file: selectedFile,
-                          session_id: sessionId,
-                          extract_text: extractText,
-                          generate_soap: generateSoap,
-                        } as any);
-                        setSelectedFile(null);
-                      } catch (err) {
-                        console.error(err);
-                      }
-                    }}
-                    disabled={uploadMutation.isPending}
-                  >
-                    {uploadMutation.isPending
-                      ? "Uploading..."
-                      : "Upload to Session"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setExtractText((s) => !s);
-                    }}
-                  >
-                    {extractText ? "Extract: ON" : "Extract: OFF"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setGenerateSoap((s) => !s)}
-                  >
-                    {generateSoap ? "Generate SOAP: ON" : "Generate SOAP: OFF"}
-                  </Button>
-                </Box>
-                {uploadMutation.isSuccess && (
-                  <Alert severity="success" sx={{ mt: 1 }}>
-                    {uploadMutation.data?.message || "Uploaded"}
-                  </Alert>
-                )}
-                {uploadMutation.error && (
-                  <Alert severity="error" sx={{ mt: 1 }}>
-                    {(uploadMutation.error as any).message || "Upload failed"}
-                  </Alert>
-                )}
-              </Box>
-
-              {documentActionMessage && (
-                <Alert
-                  severity={documentActionMessage.type}
-                  sx={{ mb: 2 }}
-                  onClose={() => setDocumentActionMessage(null)}
-                >
-                  {documentActionMessage.message}
-                </Alert>
-              )}
-
-              {/* Document list */}
-              {sessionDocumentsQuery.isLoading ? (
-                <Box sx={{ py: 2, textAlign: "center" }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : sessionDocumentsQuery.error ? (
-                <Alert severity="error">Failed to load documents.</Alert>
-              ) : !sessionDocumentsQuery.data ||
-                sessionDocumentsQuery.data.documents.length === 0 ? (
-                <Alert severity="info">
-                  No documents uploaded for this session.
-                </Alert>
-              ) : (
-                sessionDocumentsQuery.data.documents.map((doc) => {
-                  const isProcessing = processingDocumentId === doc.document_id;
-                  const isMetadataActive = metadataDocId === doc.document_id;
-                  const isPiiActive = piiDocId === doc.document_id;
-                  const fileSizeKb = (doc.file_size / 1024).toFixed(1);
-                  const createdDisplay = formatDisplayDate(doc.created_at);
-
-                  return (
-                    <Box
-                      key={doc.document_id}
-                      sx={{
-                        mb: 2,
-                        p: 2,
-                        border: "1px solid #f1f1f1",
-                        borderRadius: 1,
-                      }}
-                    >
-                      <Stack
-                        direction={{ xs: "column", md: "row" }}
-                        justifyContent="space-between"
-                        spacing={1.5}
-                        alignItems={{ xs: "flex-start", md: "center" }}
-                      >
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                            {doc.document_name || "Document"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {doc.file_type?.toUpperCase() || "UNKNOWN"} •{" "}
-                            {fileSizeKb}
-                            KB • Uploaded {createdDisplay}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            flexWrap="wrap"
-                            sx={{ mt: 1 }}
-                          >
-                            <Chip
-                              label={doc.upload_status}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                            <Chip
-                              label={
-                                doc.text_extracted
-                                  ? "Text extracted"
-                                  : "Extraction pending"
-                              }
-                              size="small"
-                              color={doc.text_extracted ? "success" : "default"}
-                            />
-                            {doc.soap_generated && (
-                              <Chip
-                                label="SOAP generated"
-                                size="small"
-                                color="success"
-                              />
-                            )}
-                          </Stack>
-                        </Box>
-
-                        <Stack
-                          direction={{ xs: "column", sm: "row" }}
-                          spacing={1}
-                          alignItems={{ xs: "stretch", sm: "center" }}
-                        >
-                          <Button
-                            size="small"
-                            onClick={async () => {
-                              setLoadingContentDocId(doc.document_id);
-                              try {
-                                const res =
-                                  await documentContentMutation.mutateAsync(
-                                    doc.document_id
-                                  );
-                                setViewingDocumentContent({
-                                  documentId: doc.document_id,
-                                  content: res.content,
-                                });
-                                setDocumentActionMessage({
-                                  type: res.extracted ? "success" : "info",
-                                  message:
-                                    res.message ||
-                                    (res.extracted
-                                      ? "Extracted text loaded."
-                                      : "Text extraction pending; retry shortly."),
-                                });
-                              } catch (err: unknown) {
-                                const message =
-                                  err instanceof Error
-                                    ? err.message
-                                    : "Failed to load document content.";
-                                setDocumentActionMessage({
-                                  type: "error",
-                                  message,
-                                });
-                              } finally {
-                                setLoadingContentDocId(null);
-                              }
-                            }}
-                            disabled={
-                              documentContentMutation.isPending &&
-                              loadingContentDocId === doc.document_id
-                            }
-                          >
-                            {documentContentMutation.isPending &&
-                            loadingContentDocId === doc.document_id
-                              ? "Loading..."
-                              : "View text"}
-                          </Button>
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              handleProcessDocument(doc.document_id)
-                            }
-                            disabled={
-                              isProcessing || processDocumentMutation.isPending
-                            }
-                          >
-                            {isProcessing || processDocumentMutation.isPending
-                              ? "Processing..."
-                              : "Reprocess"}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={
-                              isMetadataActive ? "contained" : "outlined"
-                            }
-                            onClick={() => handleShowMetadata(doc.document_id)}
-                          >
-                            Metadata
-                          </Button>
-                          <Button
-                            size="small"
-                            variant={isPiiActive ? "contained" : "outlined"}
-                            onClick={() => handleShowPii(doc.document_id)}
-                          >
-                            PII status
-                          </Button>
-                        </Stack>
-                      </Stack>
-                    </Box>
-                  );
-                })
-              )}
-
-              {(metadataDocId || piiDocId) && (
-                <Box sx={{ mt: 3 }}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="subtitle1">
-                      Document insights
-                    </Typography>
-                    <Button size="small" onClick={handleClearDocumentInsights}>
-                      Clear selections
-                    </Button>
-                  </Stack>
-
-                  {metadataDocId && (
-                    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Metadata for document {metadataDocId?.slice(0, 8)}
-                      </Typography>
-                      {documentMetadataQuery.isLoading ? (
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <CircularProgress size={16} />
-                          <Typography variant="body2">
-                            Loading metadata…
-                          </Typography>
-                        </Stack>
-                      ) : documentMetadataQuery.error ? (
-                        <Alert severity="error">
-                          Failed to fetch metadata.
-                        </Alert>
-                      ) : documentMetadataQuery.data ? (
-                        <Grid container spacing={1}>
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              File path
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{ wordBreak: "break-all" }}
-                            >
-                              {documentMetadataQuery.data.file_path}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Processed at
-                            </Typography>
-                            <Typography variant="body2">
-                              {documentMetadataQuery.data.processed_at
-                                ? formatDisplayDate(
-                                    documentMetadataQuery.data.processed_at
-                                  )
-                                : "Pending"}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              SOAP generated
-                            </Typography>
-                            <Typography variant="body2">
-                              {documentMetadataQuery.data.soap_generated
-                                ? "Yes"
-                                : "No"}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Text extracted
-                            </Typography>
-                            <Typography variant="body2">
-                              {documentMetadataQuery.data.text_extracted
-                                ? "Yes"
-                                : "No"}
-                            </Typography>
-                          </Grid>
-                        </Grid>
-                      ) : null}
-                    </Paper>
-                  )}
-
-                  {piiDocId && (
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        PII status for document {piiDocId?.slice(0, 8)}
-                      </Typography>
-                      {documentPiiQuery.isLoading ? (
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <CircularProgress size={16} />
-                          <Typography variant="body2">
-                            Checking PII status…
-                          </Typography>
-                        </Stack>
-                      ) : documentPiiQuery.error ? (
-                        <Alert severity="error">
-                          Failed to fetch PII status.
-                        </Alert>
-                      ) : documentPiiQuery.data ? (
-                        <Stack spacing={1}>
-                          <Typography variant="body2">
-                            Masked:{" "}
-                            {documentPiiQuery.data.pii_masked ? "Yes" : "No"}
-                          </Typography>
-                          <Typography variant="body2">
-                            Entities detected:{" "}
-                            {documentPiiQuery.data.pii_entities_found ??
-                              "Unknown"}
-                          </Typography>
-                          {documentPiiQuery.data.pii_processing_note && (
-                            <Typography variant="body2">
-                              Notes: {documentPiiQuery.data.pii_processing_note}
-                            </Typography>
-                          )}
-                        </Stack>
-                      ) : null}
-                    </Paper>
-                  )}
-                </Box>
-              )}
-
-              {viewingDocumentContent && (
-                <Box
-                  sx={{
-                    mt: 2,
-                    p: 2,
-                    bgcolor: "background.paper",
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="subtitle2">Document Text</Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ whiteSpace: "pre-wrap", mt: 1 }}
-                  >
-                    {viewingDocumentContent.content}
-                  </Typography>
-                  <Box sx={{ mt: 1 }}>
-                    <Button
-                      size="small"
-                      onClick={() => setViewingDocumentContent(null)}
-                    >
-                      Close
-                    </Button>
-                  </Box>
-                </Box>
-              )}
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Visit Details
-              </Typography>
-              <Box component="form" onSubmit={handleUpdate}>
-                <TextField
-                  label="Visit Date"
-                  type="datetime-local"
-                  fullWidth
-                  margin="normal"
-                  value={visitDate}
-                  onChange={(event) => {
-                    setVisitDate(event.target.value);
-                    setIsDirty(true);
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                />
-
-                <TextField
-                  label="Session Notes"
-                  fullWidth
-                  multiline
-                  minRows={4}
-                  margin="normal"
-                  value={notes}
-                  onChange={(event) => {
-                    setNotes(event.target.value);
-                    setIsDirty(true);
-                  }}
-                  placeholder="Update notes captured during the visit"
-                />
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 3,
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<Delete />}
-                    onClick={handleDelete}
-                    disabled={deleteSessionMutation.isPending}
-                  >
-                    Delete Session
-                  </Button>
-                  <Button
-                    variant="contained"
-                    type="submit"
-                    disabled={!isDirty || updateSessionMutation.isPending}
-                  >
-                    {updateSessionMutation.isPending
-                      ? "Saving..."
-                      : "Save Changes"}
-                  </Button>
-                </Box>
-              </Box>
-            </Paper>
+            <SessionDetailsForm
+              visitDate={visitDate}
+              notes={notes}
+              isDirty={isDirty}
+              isUpdating={updateSessionMutation.isPending}
+              isDeleting={deleteSessionMutation.isPending}
+              onVisitDateChange={(value) => {
+                setVisitDate(value);
+                setIsDirty(true);
+              }}
+              onNotesChange={(value) => {
+                setNotes(value);
+                setIsDirty(true);
+              }}
+              onSubmit={handleUpdate}
+              onDelete={handleDelete}
+            />
           </Stack>
         )}
       </Container>

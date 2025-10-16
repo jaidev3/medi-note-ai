@@ -30,12 +30,7 @@ export const TestimonialsSection: React.FC = () => {
     <Box sx={{ bgcolor: "#f8f9ff", py: { xs: 10, md: 14 } }}>
       <Container maxWidth="lg">
         <Box textAlign="center" mb={8}>
-          <Typography
-            variant="h3"
-            component="h2"
-            fontWeight={800}
-            gutterBottom
-          >
+          <Typography variant="h3" component="h2" fontWeight={800} gutterBottom>
             Loved by leading hearing care teams
           </Typography>
           <Typography

@@ -55,8 +55,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 sx={{ color: "#4b5563", fontWeight: 400, lineHeight: 1.6 }}
               >
                 Automate documentation, stay HIPAA compliant, and give every
-                patient more time with intelligent assistance tuned for
-                hearing care.
+                patient more time with intelligent assistance tuned for hearing
+                care.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <Button
