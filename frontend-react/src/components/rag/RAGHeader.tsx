@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -10,10 +10,22 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Avatar,
+  IconButton,
+  Menu,
+  MenuItem as MenuItemInner,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Tooltip,
 } from "@mui/material";
 import {
   ClearAll as ClearAllIcon,
   FileDownload as FileDownloadIcon,
+  MoreVert as MoreVertIcon,
+  Person as PersonIcon,
 } from "@mui/icons-material";
 
 interface Message {
@@ -56,62 +68,77 @@ export const RAGHeader: React.FC<RAGHeaderProps> = ({
   onClearChat,
   onDownloadTranscript,
 }) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const patientName = useMemo(
+    () => patients.find((p) => p.id === patientId)?.name || "",
+    [patients, patientId]
+  );
+
+  const sessionLabel = useMemo(() => {
+    const s = sessions.find((s) => s.session_id === sessionId);
+    return s?.visit_date ? new Date(s.visit_date).toLocaleDateString() : "";
+  }, [sessions, sessionId]);
+
+  const openMenu = (e: React.MouseEvent<HTMLElement>) =>
+    setAnchorEl(e.currentTarget);
+  const closeMenu = () => setAnchorEl(null);
+
+  const handleClearClick = () => setConfirmOpen(true);
+  const handleConfirmClear = () => {
+    setConfirmOpen(false);
+    onClearChat();
+  };
+  const handleCancelClear = () => setConfirmOpen(false);
+
+  const handleDownload = () => {
+    closeMenu();
+    // Currently the parent handles the transcript format. If needed,
+    // extend onDownloadTranscript to accept a format argument.
+    onDownloadTranscript();
+  };
+
   return (
     <Paper sx={{ p: 3, mb: 3, boxShadow: 1 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 2 }}>
-        Ask About Patient Records
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Select a patient and ask any question about their medical history,
-        visits, or notes
-      </Typography>
+      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 1 }}>
+        <Avatar sx={{ bgcolor: "primary.main", mr: 1 }} aria-hidden>
+          {patientName ? patientName.charAt(0).toUpperCase() : <PersonIcon />}
+        </Avatar>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+            Ask about patient records
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Select a patient and ask questions about their history, visits, or
+            notes.
+          </Typography>
+        </Box>
 
-      {/* Selected patient/session chips */}
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          gap: 1,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        {patientId && (
-          <Chip
-            label={patients.find((p) => p.id === patientId)?.name || "Patient"}
-            color="primary"
-            size="small"
-          />
-        )}
-        {sessionId && (
-          <Chip
-            label={
-              sessions.find((s) => s.session_id === sessionId)?.visit_date
-                ? new Date(
-                    sessions.find((s) => s.session_id === sessionId)!.visit_date
-                  ).toLocaleDateString()
-                : "Session"
-            }
-            size="small"
-          />
-        )}
+        <Tooltip title={patientName || "No patient selected"}>
+          <IconButton size="small" aria-label="patient-name">
+            <Typography variant="body2">{patientName || "—"}</Typography>
+          </IconButton>
+        </Tooltip>
       </Box>
+
       <Box
         sx={{
           display: "flex",
           gap: 2,
-          alignItems: "flex-start",
           flexWrap: "wrap",
+          alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <FormControl fullWidth sx={{ maxWidth: 400 }}>
-            <InputLabel>Select Patient</InputLabel>
+        <Box sx={{ display: "flex", gap: 2, flex: 1, minWidth: 240 }}>
+          <FormControl fullWidth sx={{ maxWidth: 420 }} size="small">
+            <InputLabel id="select-patient-label">Patient</InputLabel>
             <Select
+              labelId="select-patient-label"
               value={patientId}
               onChange={(e) => onPatientChange(e.target.value)}
-              label="Select Patient"
+              label="Patient"
             >
               <MenuItem value="">Choose a patient...</MenuItem>
               {patients.map((patient) => (
@@ -122,12 +149,15 @@ export const RAGHeader: React.FC<RAGHeaderProps> = ({
             </Select>
           </FormControl>
 
-          <FormControl fullWidth sx={{ maxWidth: 400 }}>
-            <InputLabel>Session (Optional)</InputLabel>
+          <FormControl fullWidth sx={{ maxWidth: 320 }} size="small">
+            <InputLabel id="select-session-label">
+              Session (optional)
+            </InputLabel>
             <Select
+              labelId="select-session-label"
               value={sessionId}
               onChange={(e) => onSessionChange(e.target.value)}
-              label="Session (Optional)"
+              label="Session (optional)"
               disabled={!patientId}
             >
               <MenuItem value="">All Sessions</MenuItem>
@@ -144,21 +174,83 @@ export const RAGHeader: React.FC<RAGHeaderProps> = ({
           <Button
             variant="outlined"
             startIcon={<ClearAllIcon />}
-            onClick={onClearChat}
+            onClick={handleClearClick}
             disabled={messages.length === 0}
+            color="inherit"
           >
             Clear Chat
           </Button>
+
           <Button
             variant="contained"
             startIcon={<FileDownloadIcon />}
-            onClick={onDownloadTranscript}
+            onClick={openMenu}
             disabled={messages.length === 0}
           >
-            Download Transcript
+            Export
           </Button>
+
+          <IconButton
+            aria-label="more"
+            size="small"
+            onClick={openMenu}
+            aria-haspopup="true"
+            aria-expanded={Boolean(anchorEl) ? "true" : undefined}
+          >
+            <MoreVertIcon />
+          </IconButton>
+
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={closeMenu}
+          >
+            <MenuItemInner onClick={() => handleDownload()}>
+              Download .txt
+            </MenuItemInner>
+            <MenuItemInner onClick={() => handleDownload()}>
+              Download .json
+            </MenuItemInner>
+          </Menu>
         </Stack>
       </Box>
+
+      {/* chips for quick context */}
+      <Box
+        sx={{
+          mt: 2,
+          display: "flex",
+          gap: 1,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {patientId && (
+          <Chip label={patientName || "Patient"} color="primary" size="small" />
+        )}
+        {sessionId && <Chip label={sessionLabel || "Session"} size="small" />}
+        <Chip label={`${messages.length} messages`} size="small" />
+      </Box>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={handleCancelClear}
+        aria-labelledby="confirm-clear-title"
+      >
+        <DialogTitle id="confirm-clear-title">Clear chat?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will remove all messages from the current conversation. This
+            action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelClear}>Cancel</Button>
+          <Button color="error" onClick={handleConfirmClear} autoFocus>
+            Clear
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
