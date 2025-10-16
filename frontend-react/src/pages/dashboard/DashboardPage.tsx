@@ -91,8 +91,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
       <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
         {/* Stats Overview */}
         {statsLoading ? (

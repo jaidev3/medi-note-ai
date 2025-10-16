@@ -12,7 +12,7 @@ export const API_ENDPOINTS = {
   USERS: {
     LIST: "/users",
     DETAIL: (id: string) => `/users/${id}`,
-    UPDATE: (id: string) => `/users/${id}`,
+    UPDATE: (id: string) => `/users/professionals/${id}`,
     DELETE: (id: string) => `/users/${id}`,
   },
   DOCUMENTS: {
