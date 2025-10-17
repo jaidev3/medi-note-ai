@@ -10,7 +10,7 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 import structlog
 from dotenv import load_dotenv
-import google.generativeai as genai
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 # Load environment variables
 load_dotenv()
@@ -27,7 +27,7 @@ class RAGService:
     
     def __init__(self):
         """Initialize RAG service with Gemini embeddings model."""
-        self.embeddings = None
+        self.embedding_model = None
         self._initialize_models()
     
     def _initialize_models(self):
@@ -36,18 +36,21 @@ class RAGService:
             google_api_key = os.getenv("GOOGLE_API_KEY")
             gemini_embedding_model = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
             
-            logger.info("Initializing Gemini embedding model")
-            
-            # Configure Gemini API
-            genai.configure(api_key=google_api_key)
-            
-            # Store the embedding model name
-            self.embedding_model = gemini_embedding_model
-            
-            logger.info("✅ Gemini embedding model initialized successfully", model=self.embedding_model)
+            if not google_api_key:
+                raise RuntimeError("GOOGLE_API_KEY environment variable is not set")
+
+            logger.info("Initializing LangChain Gemini embedding model")
+
+            # Initialize LangChain embedding model
+            self.embedding_model = GoogleGenerativeAIEmbeddings(
+                model=gemini_embedding_model,
+                google_api_key=google_api_key,
+            )
+
+            logger.info("✅ LangChain Gemini embedding model initialized successfully", model=gemini_embedding_model)
             
         except Exception as e:
-            logger.error("❌ Failed to initialize Gemini embedding model", error=str(e))
+            logger.error("❌ Failed to initialize LangChain Gemini embedding model", error=str(e))
             raise RuntimeError(f"RAG model initialization failed: {e}")
     
     async def generate_embedding(self, request: EmbeddingRequest) -> EmbeddingResponse:
@@ -68,14 +71,8 @@ class RAGService:
             if not self.embedding_model:
                 raise RuntimeError("Embedding model not initialized")
             
-            # Generate embedding using Gemini
-            result = genai.embed_content(
-                model=self.embedding_model,
-                content=request.text,
-                task_type="retrieval_document"
-            )
-            
-            embedding_vector = result['embedding']
+            # Generate embedding using LangChain Gemini embeddings
+            embedding_vector = self.embedding_model.embed_query(request.text)
             
             # Normalize if requested
             if request.normalize:
@@ -138,15 +135,8 @@ class RAGService:
                 batch = request.texts[i:i + request.batch_size]
                 
                 try:
-                    # Generate embeddings for batch using Gemini
-                    batch_embeddings = []
-                    for text in batch:
-                        result = genai.embed_content(
-                            model=self.embedding_model,
-                            content=text,
-                            task_type="retrieval_document"
-                        )
-                        batch_embeddings.append(result['embedding'])
+                    # Generate embeddings for batch using LangChain Gemini
+                    batch_embeddings = self.embedding_model.embed_documents(batch)
                     
                     # Normalize if requested
                     if request.normalize:
