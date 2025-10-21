@@ -2,40 +2,53 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Container,
+  Box,
   Typography,
-  Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Alert,
-  Box,
-  Pagination,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  useTheme,
+  useMediaQuery,
+  Chip,
+  Avatar,
 } from "@mui/material";
-import { Add } from "@mui/icons-material";
-import { useAuth } from "@/hooks/useAuth";
-import { useListSessions, useDeleteSession } from "@/hooks/useSessionsApi";
-import { useListPatients } from "@/hooks/usePatientsApi";
-import { AddSessionModal } from "@/components/modals/AddSessionModal";
+import {
+  Add,
+  Event,
+  Person,
+  Description,
+  Folder,
+  Delete,
+  Visibility,
+  Edit,
+} from "@mui/icons-material";
+import { useAuth } from "../../hooks/useAuth";
+import { useListSessions, useDeleteSession } from "../../hooks/useSessionsApi";
+import { useListPatients } from "../../hooks/usePatientsApi";
+import { AddSessionModal } from "../../components/modals/AddSessionModal";
+import { EnhancedCard, EnhancedButton, EnhancedDataTable } from "../../components/ui";
+import { EmptyState } from "../../components/EmptyState";
 
-export const SessionsPage: React.FC = () => {
+const PAGE_SIZE = 20;
+
+export const EnhancedSessionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   useAuth();
+  
   const [page, setPage] = useState(1);
   const [patientFilter, setPatientFilter] = useState<string>("");
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [orderBy, setOrderBy] = useState("visit_date");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
 
   const { data, isLoading, error } = useListSessions(
     page,
-    20,
+    PAGE_SIZE,
     patientFilter || undefined,
     undefined
   );
@@ -44,8 +57,9 @@ export const SessionsPage: React.FC = () => {
 
   const sessions = data?.sessions || [];
   const totalCount = data?.total_count || 0;
-  const totalPages = Math.ceil(totalCount / 20);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const patients = patientsData?.patients || [];
+  
   const patientNameMap = useMemo(() => {
     const entries = new Map<string, string>();
     patients.forEach((patient) => entries.set(patient.id, patient.name));
@@ -62,205 +76,227 @@ export const SessionsPage: React.FC = () => {
     }
   };
 
+  const handleRequestSort = (property: string) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
+  const columns = [
+    {
+      id: "session_id",
+      label: "Session ID",
+      minWidth: 120,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Avatar
+            sx={{
+              bgcolor: theme.palette.secondary.main,
+              width: 32,
+              height: 32,
+              fontSize: "0.75rem",
+            }}
+          >
+            {value?.slice(0, 2).toUpperCase()}
+          </Avatar>
+          <Typography variant="body2" fontWeight={600} fontFamily="monospace">
+            {value?.slice(0, 12)}...
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "patient_id",
+      label: "Patient",
+      minWidth: 150,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Person fontSize="small" color="action" />
+          <Typography variant="body2">
+            {patientNameMap.get(value) || value}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "visit_date",
+      label: "Visit Date",
+      minWidth: 150,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Event fontSize="small" color="action" />
+          <Typography variant="body2">
+            {formatDate(value)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "document_count",
+      label: "Documents",
+      minWidth: 100,
+      sortable: true,
+      mobile: true,
+      align: "center" as const,
+      format: (value: number) => (
+        <Chip
+          icon={<Folder fontSize="small" />}
+          label={value}
+          size="small"
+          color="primary"
+          variant="outlined"
+        />
+      ),
+    },
+    {
+      id: "soap_note_count",
+      label: "SOAP Notes",
+      minWidth: 100,
+      sortable: true,
+      mobile: true,
+      align: "center" as const,
+      format: (value: number) => (
+        <Chip
+          icon={<Description fontSize="small" />}
+          label={value}
+          size="small"
+          color="success"
+          variant="outlined"
+        />
+      ),
+    },
+  ];
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
-      <Container maxWidth="lg" sx={{ mt: 5, mb: 4 }}>
-        <Box
-          sx={{
-            mb: 4,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 2,
-          }}
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      {/* Header */}
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+          gap: 2,
+          flexDirection: { xs: "column", md: "row" },
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h3"
+            component="h1"
+            fontWeight={700}
+            gutterBottom
+            sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
+          >
+            Patient Visit Sessions
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage and track patient visits and sessions.
+          </Typography>
+        </Box>
+        <EnhancedButton
+          startIcon={<Add />}
+          onClick={() => setIsAddSessionModalOpen(true)}
+          gradient
+          sx={{ minWidth: { xs: "100%", md: "auto" } }}
         >
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight={800}>
-              Patient Visit Sessions
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Manage and track patient visits and sessions.
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setIsAddSessionModalOpen(true)}
-            sx={{
-              fontWeight: 700,
-              textTransform: "none",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
-              },
-              transition: "all 0.3s ease",
+          New Session
+        </EnhancedButton>
+      </Box>
+
+      {/* Filters */}
+      <Box sx={{ mb: 4 }}>
+        <FormControl size="medium" sx={{ minWidth: { xs: "100%", md: 250 } }}>
+          <InputLabel>Filter by Patient</InputLabel>
+          <Select
+            value={patientFilter}
+            onChange={(e) => {
+              setPatientFilter(e.target.value);
+              setPage(1);
             }}
+            label="Filter by Patient"
           >
-            New Session
-          </Button>
-        </Box>
+            <MenuItem value="">All Patients</MenuItem>
+            {patients.map((patient) => (
+              <MenuItem key={patient.id} value={patient.id}>
+                {patient.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
-        <Box sx={{ mb: 4 }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Filter by Patient</InputLabel>
-            <Select
-              value={patientFilter}
-              onChange={(e) => {
-                setPatientFilter(e.target.value);
-                setPage(1);
-              }}
-              label="Filter by Patient"
-              sx={{
-                borderRadius: 2,
-                "& .MuiOutlinedInput-root": {
-                  "&:hover fieldset": { borderColor: "#667eea" },
-                },
-              }}
-            >
-              <MenuItem value="">All Patients</MenuItem>
-              {patients.map((patient) => (
-                <MenuItem key={patient.id} value={patient.id}>
-                  {patient.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      {/* Content */}
+      {isLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <CircularProgress />
         </Box>
-
-        {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          Failed to load sessions: {error.message}
+        </Alert>
+      ) : sessions.length === 0 ? (
+        <EnhancedCard>
+          <Box sx={{ textAlign: "center", py: 6 }}>
+            <EmptyState
+              title={
+                patientFilter
+                  ? "No sessions found for this patient"
+                  : "No sessions yet. Create your first session!"
+              }
+            />
+            <Box sx={{ mt: 3 }}>
+              <EnhancedButton
+                startIcon={<Add />}
+                onClick={() => setIsAddSessionModalOpen(true)}
+                gradient
+              >
+                Create Session
+              </EnhancedButton>
+            </Box>
           </Box>
-        ) : error ? (
-          <Alert severity="error">
-            Failed to load sessions: {error.message}
-          </Alert>
-        ) : sessions.length === 0 ? (
-          <Paper
-            sx={{
-              p: 5,
-              textAlign: "center",
-              borderRadius: 3,
-              border: "1px solid #e8ebf8",
-              backgroundColor: "white",
+        </EnhancedCard>
+      ) : (
+        <EnhancedCard>
+          <EnhancedDataTable
+            columns={columns}
+            rows={sessions}
+            page={page - 1} // Material-UI uses 0-based indexing
+            rowsPerPage={PAGE_SIZE}
+            totalRows={totalCount}
+            onPageChange={(_, newPage) => setPage(newPage + 1)}
+            onRowsPerPageChange={(event) => {
+              setPage(1);
+              // Handle rows per page change if needed
             }}
-          >
-            <Typography color="text.secondary" variant="h6" fontWeight={700}>
-              {patientFilter
-                ? "No sessions found for this patient"
-                : "No sessions yet. Create your first session!"}
-            </Typography>
-          </Paper>
-        ) : (
-          <>
-            <TableContainer
-              component={Paper}
-              sx={{
-                borderRadius: 3,
-                border: "1px solid #e8ebf8",
-                boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
-              }}
-            >
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f8f9ff" }}>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Session ID
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Patient
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Visit Date
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Documents
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      SOAP Notes
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Actions
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sessions.map((session) => (
-                    <TableRow
-                      key={session.session_id}
-                      hover
-                      sx={{
-                        cursor: "pointer",
-                        "&:hover": {
-                          backgroundColor: "rgba(102, 126, 234, 0.04)",
-                        },
-                        transition: "background-color 0.2s ease",
-                      }}
-                      onClick={(e) => {
-                        if (
-                          !(e.target as HTMLElement).closest(".action-button")
-                        ) {
-                          navigate(`/sessions/${session.session_id}`);
-                        }
-                      }}
-                    >
-                      <TableCell sx={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                        {session.session_id.slice(0, 12)}...
-                      </TableCell>
-                      <TableCell>
-                        {patientNameMap.get(session.patient_id) ||
-                          session.patient_id}
-                      </TableCell>
-                      <TableCell>{formatDate(session.visit_date)}</TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {session.document_count}
-                      </TableCell>
-                      <TableCell sx={{ textAlign: "center" }}>
-                        {session.soap_note_count}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          className="action-button"
-                          size="small"
-                          color="error"
-                          onClick={() =>
-                            handleDeleteSession(session.session_id)
-                          }
-                          disabled={deleteSessionMutation.isPending}
-                          sx={{ fontWeight: 600 }}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            onRowClick={(row) => navigate(`/sessions/${row.session_id}`)}
+            onDelete={(row) => handleDeleteSession(row.session_id)}
+            orderBy={orderBy}
+            order={order}
+            onRequestSort={handleRequestSort}
+            emptyMessage="No sessions found"
+          />
+        </EnhancedCard>
+      )}
 
-            {totalPages > 1 && (
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, newPage) => setPage(newPage)}
-                  color="primary"
-                />
-              </Box>
-            )}
-          </>
-        )}
-      </Container>
-
+      {/* Add Session Modal */}
       <AddSessionModal
         open={isAddSessionModalOpen}
         onClose={() => setIsAddSessionModalOpen(false)}
         onSuccess={() => window.location.reload()}
       />
-    </div>
+    </Container>
   );
 };
+
+export default EnhancedSessionsPage;

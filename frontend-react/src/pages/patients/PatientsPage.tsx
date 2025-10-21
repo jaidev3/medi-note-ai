@@ -4,34 +4,45 @@ import {
   Container,
   Box,
   Typography,
-  Button,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Alert,
   TextField,
-  Pagination,
+  useTheme,
+  useMediaQuery,
+  Grid,
   Chip,
-  Stack,
+  Avatar,
+  IconButton,
 } from "@mui/material";
-import { Add, Search } from "@mui/icons-material";
-// Layout provides the shared Navbar
-import { useListPatients } from "@/hooks/usePatientsApi";
-import { AddPatientModal } from "@/components/modals/AddPatientModal";
+import {
+  Add,
+  Search,
+  Person,
+  Email,
+  Phone,
+  CalendarToday,
+  Visibility,
+  Edit,
+  Delete,
+} from "@mui/icons-material";
+import { useListPatients } from "../../hooks/usePatientsApi";
+import { AddPatientModal } from "../../components/modals/AddPatientModal";
+import { EnhancedCard, EnhancedButton, EnhancedDataTable } from "../../components/ui";
+import { EmptyState } from "../../components/EmptyState";
 
 const PAGE_SIZE = 20;
 
-export const PatientsPage: React.FC = () => {
+export const EnhancedPatientsPage: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
+  const [orderBy, setOrderBy] = useState("name");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
 
   const { data, isLoading, error, refetch } = useListPatients(
     page,
@@ -59,212 +70,240 @@ export const PatientsPage: React.FC = () => {
     refetch();
   };
 
-  return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
-      <Container maxWidth="lg" sx={{ mt: 5, mb: 4 }}>
-        <Box
-          display="flex"
-          flexDirection={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "stretch", md: "center" }}
-          gap={3}
-          mb={4}
-        >
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight={800}>
-              Patient Records
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Search, review, and update your patient roster.
-            </Typography>
-          </Box>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              size="small"
-              placeholder="Search by name or email"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  backgroundColor: "white",
-                  "&:hover fieldset": { borderColor: "#667eea" },
-                },
-              }}
-              InputProps={{
-                startAdornment: <Search sx={{ mr: 1, color: "#667eea" }} />,
-              }}
-            />
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setIsAddPatientModalOpen(true)}
-              sx={{
-                fontWeight: 700,
-                textTransform: "none",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
-                },
-                transition: "all 0.3s ease",
-              }}
-            >
-              Add Patient
-            </Button>
-          </Stack>
-        </Box>
+  const handleRequestSort = (property: string) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
 
-        {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert
-            severity="error"
-            action={
-              <Button color="inherit" size="small" onClick={handleRetry}>
-                Retry
-              </Button>
-            }
-          >
-            Failed to load patients. {error.message}
-          </Alert>
-        ) : patients.length === 0 ? (
-          <Paper
+  const formatLastVisit = (date: string) => {
+    if (!date) return "Not recorded";
+    return new Date(date).toLocaleDateString();
+  };
+
+  const columns = [
+    {
+      id: "name",
+      label: "Name",
+      minWidth: 150,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Avatar
             sx={{
-              p: 5,
-              textAlign: "center",
-              borderRadius: 3,
-              border: "1px solid #e8ebf8",
-              backgroundColor: "white",
+              bgcolor: theme.palette.primary.main,
+              width: 40,
+              height: 40,
             }}
           >
-            <Stack spacing={2} alignItems="center">
-              <Typography variant="h6" fontWeight={700}>
-                {debouncedSearch
-                  ? "No patients match your search"
-                  : "No patients yet"}
-              </Typography>
-              <Typography color="text.secondary">
-                {debouncedSearch
+            {value?.charAt(0)?.toUpperCase() || <Person />}
+          </Avatar>
+          <Typography variant="body2" fontWeight={600}>
+            {value || "Unnamed"}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "email",
+      label: "Email",
+      minWidth: 200,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Email fontSize="small" color="action" />
+          <Typography variant="body2">
+            {value || "—"}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "phone",
+      label: "Phone",
+      minWidth: 150,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Phone fontSize="small" color="action" />
+          <Typography variant="body2">
+            {value || "—"}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: "last_visit",
+      label: "Last Visit",
+      minWidth: 120,
+      sortable: true,
+      mobile: true,
+      format: (value: string) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <CalendarToday fontSize="small" color="action" />
+          {value ? (
+            <Chip
+              label={new Date(value).toLocaleDateString()}
+              size="small"
+              variant="outlined"
+              color="primary"
+            />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Not recorded
+            </Typography>
+          )}
+        </Box>
+      ),
+    },
+    {
+      id: "total_visits",
+      label: "Total Visits",
+      minWidth: 100,
+      sortable: true,
+      mobile: true,
+      format: (value: number) => (
+        <Chip
+          label={value}
+          size="small"
+          color="secondary"
+          variant="filled"
+        />
+      ),
+    },
+  ];
+
+  return (
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      {/* Header */}
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "stretch", md: "center" },
+          gap: 3,
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h3"
+            component="h1"
+            fontWeight={700}
+            gutterBottom
+            sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
+          >
+            Patient Records
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Search, review, and update your patient roster.
+          </Typography>
+        </Box>
+        <EnhancedButton
+          startIcon={<Add />}
+          onClick={() => setIsAddPatientModalOpen(true)}
+          gradient
+          sx={{ minWidth: { xs: "100%", md: "auto" } }}
+        >
+          Add Patient
+        </EnhancedButton>
+      </Box>
+
+      {/* Search Bar */}
+      <Box sx={{ mb: 4 }}>
+        <TextField
+          fullWidth
+          size="medium"
+          placeholder="Search by name or email"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          variant="outlined"
+          InputProps={{
+            startAdornment: <Search sx={{ mr: 2, color: "action.active" }} />,
+          }}
+          sx={{
+            maxWidth: { xs: "100%", md: 400 },
+          }}
+        />
+      </Box>
+
+      {/* Content */}
+      {isLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert
+          severity="error"
+          action={
+            <EnhancedButton
+              color="inherit"
+              size="small"
+              onClick={handleRetry}
+            >
+              Retry
+            </EnhancedButton>
+          }
+          sx={{ mb: 4 }}
+        >
+          Failed to load patients. {error.message}
+        </Alert>
+      ) : patients.length === 0 ? (
+        <EnhancedCard>
+          <Box sx={{ textAlign: "center", py: 6 }}>
+            <EmptyState
+              title={debouncedSearch ? "No patients match your search" : "No patients yet"}
+              description={
+                debouncedSearch
                   ? "Try adjusting your search keywords."
-                  : "Create your first patient to start managing visits."}
-              </Typography>
-              <Button
-                variant="contained"
+                  : "Create your first patient to start managing visits."
+              }
+            />
+            <Box sx={{ mt: 3 }}>
+              <EnhancedButton
                 startIcon={<Add />}
                 onClick={() => setIsAddPatientModalOpen(true)}
-                sx={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  fontWeight: 700,
-                  textTransform: "none",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
-                  },
-                  transition: "all 0.3s ease",
-                }}
+                gradient
               >
                 Add Patient
-              </Button>
-            </Stack>
-          </Paper>
-        ) : (
-          <>
-            <TableContainer
-              component={Paper}
-              sx={{
-                borderRadius: 3,
-                border: "1px solid #e8ebf8",
-                boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
-              }}
-            >
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f8f9ff" }}>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Name
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Email
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Phone
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Last Visit
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: "#667eea" }}>
-                      Total Visits
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {patients.map((patient) => (
-                    <TableRow
-                      key={patient.id}
-                      hover
-                      sx={{
-                        cursor: "pointer",
-                        "&:hover": {
-                          backgroundColor: "rgba(102, 126, 234, 0.04)",
-                        },
-                        transition: "background-color 0.2s ease",
-                      }}
-                      onClick={() => navigate(`/patients/${patient.id}`)}
-                    >
-                      <TableCell sx={{ fontWeight: 600 }}>
-                        {patient.name || "Unnamed"}
-                      </TableCell>
-                      <TableCell>{patient.email || "—"}</TableCell>
-                      <TableCell>{patient.phone || "—"}</TableCell>
-                      <TableCell>
-                        {patient.last_visit ? (
-                          <Chip
-                            label={new Date(
-                              patient.last_visit
-                            ).toLocaleDateString()}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              borderColor: "#667eea",
-                              color: "#667eea",
-                            }}
-                          />
-                        ) : (
-                          "Not recorded"
-                        )}
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>
-                        {patient.total_visits}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+              </EnhancedButton>
+            </Box>
+          </Box>
+        </EnhancedCard>
+      ) : (
+        <EnhancedCard>
+          <EnhancedDataTable
+            columns={columns}
+            rows={patients}
+            page={page - 1} // Material-UI uses 0-based indexing
+            rowsPerPage={PAGE_SIZE}
+            totalRows={totalCount}
+            onPageChange={(_, newPage) => setPage(newPage + 1)}
+            onRowsPerPageChange={(event) => {
+              setPage(1);
+              // Handle rows per page change if needed
+            }}
+            onRowClick={(row) => navigate(`/patients/${row.id}`)}
+            orderBy={orderBy}
+            order={order}
+            onRequestSort={handleRequestSort}
+            emptyMessage="No patients found"
+          />
+        </EnhancedCard>
+      )}
 
-            {totalPages > 1 && (
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, newPage) => setPage(newPage)}
-                  color="primary"
-                />
-              </Box>
-            )}
-          </>
-        )}
-      </Container>
-
+      {/* Add Patient Modal */}
       <AddPatientModal
         open={isAddPatientModalOpen}
         onClose={() => setIsAddPatientModalOpen(false)}
         onSuccess={() => refetch()}
       />
-    </div>
+    </Container>
   );
 };
+
+export default EnhancedPatientsPage;

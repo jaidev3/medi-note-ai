@@ -8,12 +8,12 @@ import { LoginModal, SignupModal } from "./components/modals";
 
 // Pages
 import { HomePage } from "./pages/HomePage";
-import { DashboardPage } from "./pages/dashboard/DashboardPage";
+import DashboardPage from "./pages/dashboard/DashboardPage";
 import { DocumentUploadPage } from "./pages/documents/DocumentUploadPage";
-import { PatientsPage } from "./pages/patients/PatientsPage";
+import PatientsPage from "./pages/patients/PatientsPage";
 import { NewPatientPage } from "./pages/patients/NewPatientPage";
 import { PatientDetailPage } from "./pages/patients/PatientDetailPage";
-import { SessionsPage } from "./pages/sessions/SessionsPage";
+import SessionsPage from "./pages/sessions/SessionsPage";
 import { NewSessionPage } from "./pages/sessions/NewSessionPage";
 import { SessionDetailPage } from "./pages/sessions/SessionDetailPage";
 import { SOAPGeneratePage } from "./pages/soap/SOAPGeneratePage";
