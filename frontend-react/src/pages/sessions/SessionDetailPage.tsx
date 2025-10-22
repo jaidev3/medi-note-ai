@@ -1,44 +1,67 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Container, Box, CircularProgress, Alert, Stack } from "@mui/material";
+import {
+  Container,
+  Box,
+  CircularProgress,
+  Alert,
+  Typography,
+  Button,
+  Chip,
+  Paper,
+  Divider,
+  Card,
+  CardContent,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Stack,
+  Tabs,
+  Tab,
+} from "@mui/material";
+import {
+  ArrowBack,
+  Upload,
+  Description,
+  CalendarToday,
+  Person,
+  Edit,
+  Delete,
+  Download,
+  Visibility,
+  MedicalServices,
+  Assessment,
+  Subject,
+  Assignment,
+  Close,
+} from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useGetSession,
   useUpdateSession,
   useDeleteSession,
 } from "@/hooks/useSessionsApi";
-import { useGetPatient } from "@/hooks/usePatientsApi";
 import {
   useListSOAPNotes,
-  useApproveSOAPNote,
   useExportSOAPNotePdf,
-  useTriggerSOAPEmbedding,
 } from "@/hooks/useSoapApi";
 import {
   useSessionDocuments,
   useUploadDocument,
-  useDocumentContent,
-  useProcessDocument,
-  useDocumentMetadata,
-  useDocumentPiiStatus,
 } from "@/hooks/useDocumentsApi";
-import {
-  SessionSummaryCard,
-  SOAPNotesSection,
-  DocumentsSection,
-  SessionDetailsForm,
-} from "@/components/sessions";
-
-const toLocalInputValue = (isoDate: string) => {
-  const date = new Date(isoDate);
-  const offsetMs = date.getTimezoneOffset() * 60000;
-  const shifted = new Date(date.getTime() - offsetMs);
-  return shifted.toISOString().slice(0, 16);
-};
 
 const formatDisplayDate = (isoDate: string) => {
   try {
-    return new Date(isoDate).toLocaleString();
+    return new Date(isoDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch (error) {
     return isoDate;
   }
@@ -50,100 +73,64 @@ export const SessionDetailPage: React.FC = () => {
   useAuth();
 
   const { data: session, isLoading, error } = useGetSession(sessionId ?? "");
-  const { data: patient } = useGetPatient(session?.patient_id ?? "");
-
+  const soapNotesQuery = useListSOAPNotes(sessionId ?? "", false);
+  const sessionDocumentsQuery = useSessionDocuments(sessionId ?? "", 1, 50);
+  const exportSoapPdfMutation = useExportSOAPNotePdf();
+  const uploadMutation = useUploadDocument();
   const updateSessionMutation = useUpdateSession();
   const deleteSessionMutation = useDeleteSession();
-  const soapNotesQuery = useListSOAPNotes(sessionId ?? "", false);
-  const approveSoapMutation = useApproveSOAPNote();
-  const exportSoapPdfMutation = useExportSOAPNotePdf();
-  const triggerEmbeddingMutation = useTriggerSOAPEmbedding();
 
-  const sessionDocumentsQuery = useSessionDocuments(sessionId ?? "", 1, 50);
-  const uploadMutation = useUploadDocument();
-  const documentContentMutation = useDocumentContent();
-  const processDocumentMutation = useProcessDocument();
-  const [metadataDocId, setMetadataDocId] = useState<string | null>(null);
-  const [piiDocId, setPiiDocId] = useState<string | null>(null);
-  const documentMetadataQuery = useDocumentMetadata(metadataDocId ?? "");
-  const documentPiiQuery = useDocumentPiiStatus(piiDocId ?? "");
-  const [documentActionMessage, setDocumentActionMessage] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
-  const [soapActionFeedback, setSoapActionFeedback] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-  const [processingDocumentId, setProcessingDocumentId] = useState<
-    string | null
-  >(null);
-  const [loadingContentDocId, setLoadingContentDocId] = useState<string | null>(
-    null
-  );
-
-  const [visitDate, setVisitDate] = useState("");
-  const [notes, setNotes] = useState("");
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [extractText, setExtractText] = useState(true);
-  const [generateSoap, setGenerateSoap] = useState(false);
-  const [viewingDocumentContent, setViewingDocumentContent] = useState<{
-    documentId: string;
-    content: string;
-  } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [visitDate, setVisitDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedSOAPNote, setSelectedSOAPNote] = useState<any>(null);
+  const [currentSOAPTab, setCurrentSOAPTab] = useState(0);
 
   useEffect(() => {
     if (session) {
-      setVisitDate(toLocalInputValue(session.visit_date));
+      setVisitDate(new Date(session.visit_date).toISOString().slice(0, 16));
       setNotes(session.notes ?? "");
-      setIsDirty(false);
     }
-  }, [session?.session_id]);
+  }, [session]);
 
-  const metadata = useMemo(() => {
-    if (!session) return [];
-    return [
-      { label: "Session ID", value: session.session_id },
-      { label: "Patient", value: patient?.name ?? session.patient_id },
-      {
-        label: "Professional",
-        value: session.professional_id ?? "Assigned on visit",
-      },
-      { label: "Created", value: formatDisplayDate(session.created_at) },
-      { label: "Updated", value: formatDisplayDate(session.updated_at) },
-    ];
-  }, [patient?.name, session]);
+  const handleEditSession = () => {
+    setIsEditing(true);
+  };
 
-  const handleUpdate = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSaveSession = async () => {
     if (!sessionId) return;
-    setFeedback(null);
 
     try {
-      const payload = {
-        visit_date: visitDate ? new Date(visitDate).toISOString() : undefined,
-        notes: notes.trim() ? notes.trim() : undefined,
-      };
+      await updateSessionMutation.mutateAsync({
+        id: sessionId,
+        data: {
+          visit_date: visitDate ? new Date(visitDate).toISOString() : undefined,
+          notes: notes.trim() || undefined,
+        }
+      });
 
-      await updateSessionMutation.mutateAsync({ id: sessionId, data: payload });
       setFeedback({
         type: "success",
         message: "Session updated successfully.",
       });
-      setIsDirty(false);
+      setIsEditing(false);
     } catch (err: any) {
-      const message = err?.message || "Failed to update session.";
-      setFeedback({ type: "error", message });
+      setFeedback({
+        type: "error",
+        message: err?.message || "Failed to update session."
+      });
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteSession = async () => {
     if (!sessionId) return;
+
     const confirmed = window.confirm(
       "Delete this session? This cannot be undone."
     );
@@ -153,31 +140,43 @@ export const SessionDetailPage: React.FC = () => {
       await deleteSessionMutation.mutateAsync(sessionId);
       navigate("/sessions");
     } catch (err: any) {
-      const message = err?.message || "Failed to delete session.";
-      setFeedback({ type: "error", message });
-    }
-  };
-
-  const handleApproveNote = async (noteId: string, approved: boolean) => {
-    setSoapActionFeedback(null);
-    try {
-      await approveSoapMutation.mutateAsync({ id: noteId, approved });
-      setSoapActionFeedback({
-        type: "success",
-        message: approved
-          ? "SOAP note approved successfully."
-          : "SOAP note marked as needing revisions.",
+      setFeedback({
+        type: "error",
+        message: err?.message || "Failed to delete session."
       });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to update SOAP note approval status.";
-      setSoapActionFeedback({ type: "error", message });
     }
   };
 
-  const handleExportNotePdf = async (noteId: string, fileName: string) => {
+  const handleUploadDocument = async () => {
+    if (!selectedFile || !sessionId) return;
+
+    try {
+      await uploadMutation.mutateAsync({
+        file: selectedFile,
+        session_id: sessionId,
+        extract_text: true,
+        generate_soap: false,
+      } as any);
+
+      setSelectedFile(null);
+      setFeedback({
+        type: "success",
+        message: "Document uploaded successfully.",
+      });
+    } catch (err: any) {
+      setFeedback({
+        type: "error",
+        message: err?.message || "Failed to upload document."
+      });
+    }
+  };
+
+  const handleViewSOAPNote = (note: any) => {
+    setSelectedSOAPNote(note);
+    setCurrentSOAPTab(0);
+  };
+
+  const handleExportSOAP = async (noteId: string, fileName: string) => {
     try {
       const blob = await exportSoapPdfMutation.mutateAsync(noteId);
       const url = window.URL.createObjectURL(blob);
@@ -188,211 +187,472 @@ export const SessionDetailPage: React.FC = () => {
       anchor.click();
       anchor.remove();
       window.URL.revokeObjectURL(url);
-      setSoapActionFeedback({
+
+      setFeedback({
         type: "success",
         message: "SOAP note exported as PDF.",
       });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to export SOAP note as PDF.";
-      setSoapActionFeedback({ type: "error", message });
-    }
-  };
-
-  const handleTriggerNoteEmbedding = async (noteId: string) => {
-    setSoapActionFeedback(null);
-    try {
-      const result = await triggerEmbeddingMutation.mutateAsync({
-        note_ids: [noteId],
-      });
-      setSoapActionFeedback({
-        type: result.success ? "success" : "error",
-        message:
-          result.message ||
-          (result.success
-            ? "Embedding triggered for SOAP note."
-            : "Embedding trigger failed."),
-      });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to trigger embeddings for SOAP note.";
-      setSoapActionFeedback({ type: "error", message });
-    }
-  };
-
-  const handleProcessDocument = async (documentId: string) => {
-    setProcessingDocumentId(documentId);
-    setDocumentActionMessage(null);
-    try {
-      const response = await processDocumentMutation.mutateAsync({
-        id: documentId,
-      });
-      setDocumentActionMessage({
-        type: response.success ? "success" : "info",
-        message:
-          response.message ||
-          "Document processing complete. Refresh in a moment to see updates.",
-      });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to process document.";
-      setDocumentActionMessage({ type: "error", message });
-    } finally {
-      setProcessingDocumentId(null);
-    }
-  };
-
-  const handleViewDocumentText = async (documentId: string) => {
-    setLoadingContentDocId(documentId);
-    try {
-      const res = await documentContentMutation.mutateAsync(documentId);
-      setViewingDocumentContent({
-        documentId: documentId,
-        content: res.content,
-      });
-      setDocumentActionMessage({
-        type: res.extracted ? "success" : "info",
-        message:
-          res.message ||
-          (res.extracted
-            ? "Extracted text loaded."
-            : "Text extraction pending; retry shortly."),
-      });
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load document content.";
-      setDocumentActionMessage({
+    } catch (err: any) {
+      setFeedback({
         type: "error",
-        message,
+        message: err?.message || "Failed to export SOAP note."
       });
-    } finally {
-      setLoadingContentDocId(null);
     }
   };
 
-  const handleUploadDocument = async () => {
-    if (!selectedFile || !sessionId)
-      return alert("Select a file and ensure session is available");
-    try {
-      await uploadMutation.mutateAsync({
-        file: selectedFile,
-        session_id: sessionId,
-        extract_text: extractText,
-        generate_soap: generateSoap,
-      } as any);
-      setSelectedFile(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  if (isLoading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !session) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error">
+          {error ? "Failed to load session details." : "Session not found."}
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        {isLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error">Failed to load session details.</Alert>
-        ) : !session ? (
-          <Alert severity="warning">Session not found.</Alert>
-        ) : (
-          <Stack spacing={3}>
-            {feedback && (
-              <Alert severity={feedback.type}>{feedback.message}</Alert>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <IconButton onClick={() => navigate("/sessions")}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
+          Session Details
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<Edit />}
+          onClick={handleEditSession}
+          sx={{ mr: 2 }}
+        >
+          Edit
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<Delete />}
+          onClick={handleDeleteSession}
+          disabled={deleteSessionMutation.isPending}
+        >
+          Delete
+        </Button>
+      </Box>
+
+      {/* Feedback Alert */}
+      {feedback && (
+        <Alert
+          severity={feedback.type}
+          sx={{ mb: 3 }}
+          onClose={() => setFeedback(null)}
+        >
+          {feedback.message}
+        </Alert>
+      )}
+
+      <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+        {/* Session Summary */}
+        <Box sx={{ flex: { md: "0 0 400px", xs: "1 1 100%" } }}>
+          <Paper sx={{ p: 3, height: "fit-content" }}>
+            <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Person />
+              Session Summary
+            </Typography>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Patient
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: "medium" }}>
+                {session.patient_name || "Unknown Patient"}
+              </Typography>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                <CalendarToday sx={{ fontSize: 16, mr: 1, verticalAlign: "middle" }} />
+                Visit Date
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: "medium" }}>
+                {formatDisplayDate(session.visit_date)}
+              </Typography>
+            </Box>
+
+            {session.notes && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Notes
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: "italic" }}>
+                  {session.notes}
+                </Typography>
+              </Box>
             )}
 
-            <SessionSummaryCard
-              metadata={metadata}
-              documentCount={session.document_count}
-              soapNoteCount={session.soap_note_count}
-            />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Status
+              </Typography>
+              <Chip
+                label={session.soap_note_count > 0 ? `${session.soap_note_count} SOAP Notes` : "No SOAP Notes"}
+                color={session.soap_note_count > 0 ? "success" : "default"}
+                size="small"
+              />
+            </Box>
 
-            <SOAPNotesSection
-              notes={soapNotesQuery.data}
-              patientName={patient?.name}
-              isLoading={soapNotesQuery.isLoading}
-              error={soapNotesQuery.error}
-              actionFeedback={soapActionFeedback}
-              onApprove={handleApproveNote}
-              onExportPdf={handleExportNotePdf}
-              onTriggerEmbedding={handleTriggerNoteEmbedding}
-              onClearFeedback={() => setSoapActionFeedback(null)}
-              isApproving={approveSoapMutation.isPending}
-              isExporting={exportSoapPdfMutation.isPending}
-              isTriggeringEmbedding={triggerEmbeddingMutation.isPending}
-            />
+            <Divider sx={{ my: 2 }} />
 
-            <DocumentsSection
-              documents={sessionDocumentsQuery.data?.documents}
-              isLoading={sessionDocumentsQuery.isLoading}
-              error={sessionDocumentsQuery.error}
-              actionMessage={documentActionMessage}
-              onClearActionMessage={() => setDocumentActionMessage(null)}
-              selectedFile={selectedFile}
-              extractText={extractText}
-              generateSoap={generateSoap}
-              isUploading={uploadMutation.isPending}
-              uploadSuccess={uploadMutation.isSuccess}
-              uploadError={uploadMutation.error}
-              uploadMessage={uploadMutation.data?.message}
-              onFileSelect={setSelectedFile}
-              onUpload={handleUploadDocument}
-              onToggleExtractText={() => setExtractText((s) => !s)}
-              onToggleGenerateSoap={() => setGenerateSoap((s) => !s)}
-              processingDocumentId={processingDocumentId}
-              loadingContentDocId={loadingContentDocId}
-              onViewText={handleViewDocumentText}
-              onReprocess={handleProcessDocument}
-              metadataDocId={metadataDocId}
-              piiDocId={piiDocId}
-              onToggleMetadata={(id) =>
-                setMetadataDocId((prev) => (prev === id ? null : id))
-              }
-              onTogglePii={(id) =>
-                setPiiDocId((prev) => (prev === id ? null : id))
-              }
-              onClearInsights={() => {
-                setMetadataDocId(null);
-                setPiiDocId(null);
-                setDocumentActionMessage(null);
-              }}
-              metadataData={documentMetadataQuery.data}
-              piiData={documentPiiQuery.data}
-              isLoadingMetadata={documentMetadataQuery.isLoading}
-              isLoadingPii={documentPiiQuery.isLoading}
-              metadataError={documentMetadataQuery.error}
-              piiError={documentPiiQuery.error}
-              viewingContent={viewingDocumentContent}
-              onCloseContentViewer={() => setViewingDocumentContent(null)}
-              formatDisplayDate={formatDisplayDate}
-            />
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h4" color="primary" sx={{ fontWeight: "bold" }}>
+                  {session.document_count}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Documents
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h4" color="secondary" sx={{ fontWeight: "bold" }}>
+                  {session.soap_note_count}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  SOAP Notes
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
 
-            <SessionDetailsForm
-              visitDate={visitDate}
-              notes={notes}
-              isDirty={isDirty}
-              isUpdating={updateSessionMutation.isPending}
-              isDeleting={deleteSessionMutation.isPending}
-              onVisitDateChange={(value) => {
-                setVisitDate(value);
-                setIsDirty(true);
-              }}
-              onNotesChange={(value) => {
-                setNotes(value);
-                setIsDirty(true);
-              }}
-              onSubmit={handleUpdate}
-              onDelete={handleDelete}
-            />
+        {/* Main Content */}
+        <Box sx={{ flex: { md: "1 1 auto", xs: "1 1 100%" } }}>
+          <Stack spacing={3}>
+            {/* Document Upload */}
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Upload />
+                Quick Upload
+              </Typography>
+
+              <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+                <Button
+                  variant="contained"
+                  component="label"
+                  startIcon={<Upload />}
+                  disabled={uploadMutation.isPending}
+                >
+                  Choose File
+                  <input
+                    type="file"
+                    hidden
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.png"
+                  />
+                </Button>
+
+                {selectedFile && (
+                  <>
+                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
+                      {selectedFile.name}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      onClick={handleUploadDocument}
+                      disabled={uploadMutation.isPending}
+                    >
+                      Upload
+                    </Button>
+                  </>
+                )}
+              </Box>
+            </Paper>
+
+            {/* SOAP Notes */}
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Description />
+                SOAP Notes
+              </Typography>
+
+              {soapNotesQuery.isLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : soapNotesQuery.data?.length ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {soapNotesQuery.data.map((note: any) => (
+                    <Card key={note.note_id} variant="outlined">
+                      <CardContent sx={{ pb: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                          <Box>
+                            <Typography variant="subtitle2" color="primary">
+                              {new Date(note.created_at).toLocaleDateString()}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {note.approved ? "Approved" : "Draft"}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 1 }}>
+                            <Button
+                              size="small"
+                              startIcon={<Visibility />}
+                              onClick={() => handleViewSOAPNote(note)}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              size="small"
+                              startIcon={<Download />}
+                              onClick={() => handleExportSOAP(note.note_id, `soap-note-${new Date(note.created_at).toISOString().slice(0, 10)}`)}
+                              disabled={exportSoapPdfMutation.isPending}
+                            >
+                              Export
+                            </Button>
+                          </Box>
+                        </Box>
+
+                        <Typography variant="body2" sx={{
+                          maxHeight: 100,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 4,
+                          WebkitBoxOrient: "vertical"
+                        }}>
+                          {note.soap_note_content?.substring(0, 200)}...
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
+                  No SOAP notes generated yet. Upload documents to get started.
+                </Typography>
+              )}
+            </Paper>
+
+            {/* Documents */}
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Description />
+                Documents ({sessionDocumentsQuery.data?.documents?.length || 0})
+              </Typography>
+
+              {sessionDocumentsQuery.isLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : sessionDocumentsQuery.data?.documents?.length ? (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {sessionDocumentsQuery.data.documents.map((doc: any) => (
+                    <Card key={doc.document_id} variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Box>
+                            <Typography variant="subtitle2">
+                              {doc.filename}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(doc.uploaded_at).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={doc.processed ? "Processed" : "Pending"}
+                            color={doc.processed ? "success" : "warning"}
+                            size="small"
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
+                  No documents uploaded yet.
+                </Typography>
+              )}
+            </Paper>
           </Stack>
-        )}
-      </Container>
-    </div>
+        </Box>
+      </Box>
+
+      {/* Edit Session Dialog */}
+      <Dialog
+        open={isEditing}
+        onClose={() => setIsEditing(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Edit Session Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Visit Date"
+              type="datetime-local"
+              value={visitDate}
+              onChange={(e) => setVisitDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label="Session Notes"
+              multiline
+              rows={4}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Update notes captured during the visit"
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsEditing(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveSession}
+            variant="contained"
+            disabled={updateSessionMutation.isPending}
+          >
+            {updateSessionMutation.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* SOAP Note Detail Dialog */}
+      <Dialog
+        open={!!selectedSOAPNote}
+        onClose={() => setSelectedSOAPNote(null)}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          "& .MuiDialog-paper": {
+            minHeight: 600
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6">
+            SOAP Note Details - {session.patient_name}
+          </Typography>
+          <IconButton onClick={() => setSelectedSOAPNote(null)}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent>
+          <Box sx={{ borderBottom: 1, borderBottomColor: "divider", pb: 2, mb: 3 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Typography variant="subtitle1" color="primary">
+                {new Date(selectedSOAPNote?.created_at).toLocaleDateString()} at {new Date(selectedSOAPNote?.created_at).toLocaleTimeString()}
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Chip
+                  label={selectedSOAPNote?.approved ? "Approved" : "Draft"}
+                  color={selectedSOAPNote?.approved ? "success" : "warning"}
+                  size="small"
+                />
+                <Button
+                  size="small"
+                  startIcon={<Download />}
+                  onClick={() => {
+                    handleExportSOAP(
+                      selectedSOAPNote.note_id,
+                      `soap-note-${new Date(selectedSOAPNote.created_at).toISOString().slice(0, 10)}`
+                    );
+                  }}
+                  disabled={exportSoapPdfMutation.isPending}
+                >
+                  Export PDF
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+
+          <Tabs
+            value={currentSOAPTab}
+            onChange={(e, newValue) => setCurrentSOAPTab(newValue)}
+            sx={{ mb: 3 }}
+          >
+            <Tab label="Subjective" />
+            <Tab label="Objective" />
+            <Tab label="Assessment" />
+            <Tab label="Plan" />
+          </Tabs>
+
+          <Box sx={{ mt: 2 }}>
+            {currentSOAPTab === 0 && (
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Subject color="primary" />
+                  Subjective (S)
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 3, minHeight: 200 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                    {selectedSOAPNote?.content?.subjective?.content || "No subjective information recorded"}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {currentSOAPTab === 1 && (
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Assignment color="primary" />
+                  Objective (O)
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 3, minHeight: 200 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                    {selectedSOAPNote?.content?.objective?.content || "No objective information recorded"}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {currentSOAPTab === 2 && (
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Assessment color="primary" />
+                  Assessment (A)
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 3, minHeight: 200 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                    {selectedSOAPNote?.content?.assessment?.content || "No assessment information recorded"}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {currentSOAPTab === 3 && (
+              <Box>
+                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <MedicalServices color="primary" />
+                  Plan (P)
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 3, minHeight: 200 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                    {selectedSOAPNote?.content?.plan?.content || "No plan information recorded"}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setSelectedSOAPNote(null)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };

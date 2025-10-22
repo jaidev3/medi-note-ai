@@ -14,9 +14,7 @@ import {
   Description,
   People,
   Event,
-  CloudUpload,
   Search,
-  Settings,
   AdminPanelSettings,
   Assignment,
 } from "@mui/icons-material";
@@ -66,21 +64,7 @@ export const EnhancedDashboardPage: React.FC = () => {
       path: "/sessions",
       color: "info" as const,
     },
-    {
-      title: "Document Management",
-      description: "Upload, organize, and manage documents",
-      icon: <CloudUpload fontSize="large" />,
-      path: "/documents",
-      color: "warning" as const,
-    },
-    {
-      title: "Profile Settings",
-      description: "Manage your professional profile and preferences",
-      icon: <Settings fontSize="large" />,
-      path: "/settings",
-      color: "default" as const,
-    },
-    {
+      {
       title: "Admin Dashboard",
       description: "Manage users, patients, and system settings",
       icon: <AdminPanelSettings fontSize="large" />,
@@ -247,10 +231,10 @@ export const EnhancedDashboardPage: React.FC = () => {
             {sessions.sessions.map((s: any) => (
               <Grid item xs={12} md={6} key={s.session_id}>
                 <EnhancedCard
-                  title={`Session ${s.session_id.slice(0, 6)}`}
-                  subtitle={new Date(
+                  title={s.patient_name || `Patient ${s.patient_id.slice(0, 6)}`}
+                  subtitle={`Visit: ${new Date(
                     s.visit_date ?? s.created_at
-                  ).toLocaleDateString()}
+                  ).toLocaleDateString()}`}
                   chip={{
                     label: `${s.document_count} docs`,
                     color: "info",

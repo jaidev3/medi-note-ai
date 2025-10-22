@@ -99,14 +99,15 @@ class SessionResponse(BaseModel):
     """Response schema for session information."""
     session_id: uuid.UUID = Field(..., description="Session UUID")
     patient_id: uuid.UUID = Field(..., description="Patient ID")
+    patient_name: Optional[str] = Field(default=None, description="Patient name")
     professional_id: Optional[uuid.UUID] = Field(default=None, description="Professional ID")
     visit_date: datetime = Field(..., description="Visit date")
     notes: Optional[str] = Field(default=None, description="Session notes")
-    
+
     # Related data counts
     document_count: int = Field(default=0, description="Number of uploaded documents")
     soap_note_count: int = Field(default=0, description="Number of SOAP notes")
-    
+
     # Metadata
     created_at: datetime = Field(..., description="Session creation date")
     updated_at: datetime = Field(..., description="Last update date")

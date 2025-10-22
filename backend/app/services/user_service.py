@@ -317,9 +317,15 @@ class UserService:
                 
                 logger.info("✅ Session created successfully", session_id=str(visit_session.session_id))
                 
+                # Get patient name for response
+                patient = await session.execute(select(Patients).where(Patients.id == visit_session.patient_id))
+                patient_obj = patient.scalar_one_or_none()
+                patient_name = patient_obj.name if patient_obj else None
+
                 return SessionResponse(
                     session_id=visit_session.session_id,
                     patient_id=visit_session.patient_id,
+                    patient_name=patient_name,
                     professional_id=visit_session.professional_id,
                     visit_date=visit_session.visit_date,
                     notes=visit_session.notes,
@@ -343,64 +349,67 @@ class UserService:
     ) -> SessionListResponse:
         """
         List patient visit sessions with pagination and filtering.
-        
+
         Args:
             page: Page number (1-based)
             page_size: Number of items per page
             patient_id: Optional filter by patient ID
             professional_id: Optional filter by professional ID
-            
+
         Returns:
             SessionListResponse: Paginated list of sessions
         """
         async with async_session_maker() as session:
             try:
-                # Build base query
-                stmt = select(PatientVisitSessions)
-                
+                # Build base query with patient join
+                stmt = select(PatientVisitSessions, Patients.name).join(
+                    Patients, PatientVisitSessions.patient_id == Patients.id
+                )
+
                 # Apply filters
                 if patient_id:
                     stmt = stmt.where(PatientVisitSessions.patient_id == patient_id)
                 if professional_id:
                     stmt = stmt.where(PatientVisitSessions.professional_id == professional_id)
-                
+
                 # Get total count
                 count_stmt = select(func.count(PatientVisitSessions.session_id))
                 if patient_id:
                     count_stmt = count_stmt.where(PatientVisitSessions.patient_id == patient_id)
                 if professional_id:
                     count_stmt = count_stmt.where(PatientVisitSessions.professional_id == professional_id)
-                
+
                 total_count_result = await session.execute(count_stmt)
                 total_count = total_count_result.scalar() or 0
-                
-                # Apply pagination
-                stmt = stmt.offset((page - 1) * page_size).limit(page_size)
-                
+
+                # Apply pagination and ordering
+                stmt = stmt.offset((page - 1) * page_size).limit(page_size).order_by(PatientVisitSessions.visit_date.desc())
+
                 # Execute query
                 result = await session.execute(stmt)
-                sessions = result.scalars().all()
-                
+                session_data = result.all()
+
                 # Convert to response models
                 session_responses = []
-                for visit_session in sessions:
+                for visit_session, patient_name in session_data:
                     # Get document count
                     doc_count_stmt = select(func.count(UploadedDocuments.document_id)).where(
                         UploadedDocuments.session_id == visit_session.session_id
                     )
                     doc_count_result = await session.execute(doc_count_stmt)
                     doc_count = doc_count_result.scalar() or 0
-                    
+
                     # Get SOAP note count
                     soap_count_stmt = select(func.count(SessionSoapNotes.note_id)).where(
                         SessionSoapNotes.session_id == visit_session.session_id
                     )
                     soap_count_result = await session.execute(soap_count_stmt)
                     soap_count = soap_count_result.scalar() or 0
-                    
+
                     session_response = SessionResponse(
                         session_id=visit_session.session_id,
                         patient_id=visit_session.patient_id,
+                        patient_name=patient_name,
                         professional_id=visit_session.professional_id,
                         visit_date=visit_session.visit_date,
                         notes=visit_session.notes,
@@ -410,7 +419,7 @@ class UserService:
                         updated_at=visit_session.updated_at
                     )
                     session_responses.append(session_response)
-                
+
                 return SessionListResponse(
                     sessions=session_responses,
                     total_count=total_count,
@@ -418,7 +427,7 @@ class UserService:
                     page_size=page_size,
                     patient_id=patient_id
                 )
-                
+
             except Exception as e:
                 logger.error("❌ Failed to list sessions", error=str(e))
                 raise
@@ -426,41 +435,44 @@ class UserService:
     async def get_session(self, session_id: uuid.UUID) -> Optional[SessionResponse]:
         """
         Get session by ID.
-        
+
         Args:
             session_id: Session UUID
-            
+
         Returns:
             SessionResponse: Session information or None
         """
         async with async_session_maker() as session:
             try:
-                stmt = select(PatientVisitSessions).where(
-                    PatientVisitSessions.session_id == session_id
-                )
+                stmt = select(PatientVisitSessions, Patients.name).join(
+                    Patients, PatientVisitSessions.patient_id == Patients.id
+                ).where(PatientVisitSessions.session_id == session_id)
                 result = await session.execute(stmt)
-                visit_session = result.scalar_one_or_none()
-                
-                if not visit_session:
+                session_data = result.first()
+
+                if not session_data:
                     return None
-                
+
+                visit_session, patient_name = session_data
+
                 # Get document count
                 doc_count_stmt = select(func.count(UploadedDocuments.document_id)).where(
                     UploadedDocuments.session_id == visit_session.session_id
                 )
                 doc_count_result = await session.execute(doc_count_stmt)
                 doc_count = doc_count_result.scalar() or 0
-                
+
                 # Get SOAP note count
                 soap_count_stmt = select(func.count(SessionSoapNotes.note_id)).where(
                     SessionSoapNotes.session_id == visit_session.session_id
                 )
                 soap_count_result = await session.execute(soap_count_stmt)
                 soap_count = soap_count_result.scalar() or 0
-                
+
                 return SessionResponse(
                     session_id=visit_session.session_id,
                     patient_id=visit_session.patient_id,
+                    patient_name=patient_name,
                     professional_id=visit_session.professional_id,
                     visit_date=visit_session.visit_date,
                     notes=visit_session.notes,
@@ -469,7 +481,7 @@ class UserService:
                     created_at=visit_session.created_at,
                     updated_at=visit_session.updated_at
                 )
-                
+
             except Exception as e:
                 logger.error("❌ Failed to get session", error=str(e))
                 raise
@@ -524,9 +536,15 @@ class UserService:
                 soap_count_result = await session.execute(soap_count_stmt)
                 soap_count = soap_count_result.scalar() or 0
                 
+                # Get patient name for response
+                patient = await session.execute(select(Patients).where(Patients.id == visit_session.patient_id))
+                patient_obj = patient.scalar_one_or_none()
+                patient_name = patient_obj.name if patient_obj else None
+
                 return SessionResponse(
                     session_id=visit_session.session_id,
                     patient_id=visit_session.patient_id,
+                    patient_name=patient_name,
                     professional_id=visit_session.professional_id,
                     visit_date=visit_session.visit_date,
                     notes=visit_session.notes,

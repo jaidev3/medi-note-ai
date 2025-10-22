@@ -32,7 +32,7 @@ import { AddSessionModal } from "../../components/modals/AddSessionModal";
 import { EnhancedCard, EnhancedButton, EnhancedDataTable } from "../../components/ui";
 import { EmptyState } from "../../components/EmptyState";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export const EnhancedSessionsPage: React.FC = () => {
   const navigate = useNavigate();

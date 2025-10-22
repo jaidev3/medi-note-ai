@@ -8,6 +8,7 @@ import {
 export interface SessionResponse {
   session_id: string;
   patient_id: string;
+  patient_name?: string;
   professional_id?: string;
   visit_date: string;
   notes?: string;
