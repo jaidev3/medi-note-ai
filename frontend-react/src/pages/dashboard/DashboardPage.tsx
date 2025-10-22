@@ -18,12 +18,9 @@ import {
   Search,
   Assessment,
   AdminPanelSettings,
-  TrendingUp,
-  AccessTime,
   Assignment,
 } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
-import { useGetUserStats } from "../../hooks/useUsersApi";
 import { useListSessions } from "../../hooks/useSessionsApi";
 import { EnhancedCard, EnhancedButton } from "../../components/ui";
 import { EmptyState } from "../../components/EmptyState";
@@ -33,13 +30,7 @@ export const EnhancedDashboardPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   useAuth();
-  
-  const {
-    data: stats,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useGetUserStats();
-  
+
   const {
     data: sessions,
     isLoading: sessionsLoading,
@@ -53,7 +44,6 @@ export const EnhancedDashboardPage: React.FC = () => {
       icon: <Description fontSize="large" />,
       path: "/soap",
       color: "primary" as const,
-      trend: { value: 12, label: "from last month" },
     },
     {
       title: "Query Documents",
@@ -61,7 +51,6 @@ export const EnhancedDashboardPage: React.FC = () => {
       icon: <Search fontSize="large" />,
       path: "/rag",
       color: "secondary" as const,
-      trend: { value: 8, label: "from last month" },
     },
     {
       title: "Manage Patients",
@@ -69,7 +58,6 @@ export const EnhancedDashboardPage: React.FC = () => {
       icon: <People fontSize="large" />,
       path: "/patients",
       color: "success" as const,
-      trend: { value: 5, label: "from last month" },
     },
     {
       title: "Sessions",
@@ -77,7 +65,6 @@ export const EnhancedDashboardPage: React.FC = () => {
       icon: <Event fontSize="large" />,
       path: "/sessions",
       color: "info" as const,
-      trend: { value: -3, label: "from last month" },
     },
     {
       title: "Upload Documents",
@@ -103,37 +90,7 @@ export const EnhancedDashboardPage: React.FC = () => {
     },
   ];
 
-  const statCards = [
-    {
-      title: "Total Patients",
-      value: stats?.total_patients || 0,
-      icon: <People />,
-      color: "primary" as const,
-      trend: { value: 15, label: "from last month" },
-    },
-    {
-      title: "Total Sessions",
-      value: stats?.total_sessions || 0,
-      icon: <Event />,
-      color: "secondary" as const,
-      trend: { value: 8, label: "from last month" },
-    },
-    {
-      title: "SOAP Notes",
-      value: stats?.total_soap_notes || 0,
-      icon: <Description />,
-      color: "success" as const,
-      trend: { value: 22, label: "from last month" },
-    },
-    {
-      title: "Documents",
-      value: stats?.total_documents || 0,
-      icon: <Assessment />,
-      color: "info" as const,
-      trend: { value: 5, label: "from last month" },
-    },
-  ];
-
+  
   const filteredMenuItems = menuItems.filter((item) => {
     if (item.adminOnly) {
       // Check if user is admin - you'll need to implement this check
@@ -143,15 +100,29 @@ export const EnhancedDashboardPage: React.FC = () => {
   });
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 }, px: { xs: 2, md: 3 } }}>
       {/* Welcome Section */}
-      <Box mb={4}>
+      <Box
+        mb={4}
+        sx={{
+          background: `linear-gradient(135deg, ${theme.palette.primary.main}10 0%, ${theme.palette.secondary.main}10 100%)`,
+          p: 4,
+          borderRadius: 3,
+          border: `1px solid ${theme.palette.divider}`,
+        }}
+      >
         <Typography
           variant="h3"
           component="h1"
           fontWeight={700}
           gutterBottom
-          sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
+          sx={{
+            fontSize: { xs: "2rem", md: "2.5rem" },
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
         >
           Welcome back!
         </Typography>
@@ -160,46 +131,32 @@ export const EnhancedDashboardPage: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Stats Overview */}
-      {statsLoading ? (
-        <Box display="flex" justifyContent="center" my={4}>
-          <CircularProgress />
-        </Box>
-      ) : statsError ? (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          Failed to load statistics
-        </Alert>
-      ) : (
-        <Grid container spacing={3} sx={{ mb: 6 }}>
-          {statCards.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <EnhancedCard
-                title={stat.title}
-                trend={stat.trend}
-                icon={stat.icon}
-                hover
-              >
-                <Typography
-                  variant="h3"
-                  component="div"
-                  fontWeight={700}
-                  color={theme.palette[stat.color].main}
-                >
-                  {stat.value.toLocaleString()}
-                </Typography>
-              </EnhancedCard>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {/* Quick Actions */}
+  
+      {/* Medical Tools */}
       <Box mb={4}>
-        <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
-          Quick Actions
+        <Typography
+          variant="h4"
+          component="h2"
+          fontWeight={700}
+          gutterBottom
+          sx={{
+            position: "relative",
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              bottom: -8,
+              left: 0,
+              width: 60,
+              height: 4,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+              borderRadius: 2,
+            },
+          }}
+        >
+          Medical Tools
         </Typography>
         <Typography variant="body1" color="text.secondary" mb={3}>
-          Jump right into common workflows
+          Access your clinical workflow tools
         </Typography>
       </Box>
 
@@ -210,20 +167,23 @@ export const EnhancedDashboardPage: React.FC = () => {
               title={item.title}
               subtitle={item.description}
               icon={item.icon}
-              trend={item.trend}
+              color={item.color}
               hover
               onClick={() => navigate(item.path)}
             >
-              <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-                <EnhancedButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(item.path);
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    fontStyle: 'italic',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
                   }}
                 >
-                  Open
-                </EnhancedButton>
+                  Click to open →
+                </Typography>
               </Box>
             </EnhancedCard>
           </Grid>
@@ -243,7 +203,25 @@ export const EnhancedDashboardPage: React.FC = () => {
           }}
         >
           <Box>
-            <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
+            <Typography
+              variant="h4"
+              component="h2"
+              fontWeight={700}
+              gutterBottom
+              sx={{
+                position: "relative",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  bottom: -8,
+                  left: 0,
+                  width: 60,
+                  height: 4,
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                  borderRadius: 2,
+                },
+              }}
+            >
               Recent Sessions
             </Typography>
             <Typography variant="body1" color="text.secondary">
@@ -287,15 +265,9 @@ export const EnhancedDashboardPage: React.FC = () => {
                         {s.soap_note_count} SOAP notes
                       </Typography>
                     </Box>
-                    <EnhancedButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/sessions/${s.session_id}`);
-                      }}
-                    >
-                      Open
-                    </EnhancedButton>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      View details →
+                    </Typography>
                   </Box>
                 </EnhancedCard>
               </Grid>
