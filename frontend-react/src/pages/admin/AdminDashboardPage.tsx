@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Grid,
@@ -9,7 +10,9 @@ import {
   Tab,
   Card,
   CardContent,
+  IconButton,
 } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import {
   People,
   Person,
@@ -48,6 +51,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const AdminDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -69,13 +73,18 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-          Admin Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage users, patients, sessions, and system settings
-        </Typography>
+      <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <IconButton onClick={() => navigate("/dashboard")}>
+          <ArrowBack />
+        </IconButton>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            Admin Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage users, patients, sessions, and system settings
+          </Typography>
+        </Box>
       </Box>
 
       {/* Stats Overview */}

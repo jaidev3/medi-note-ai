@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Container, Box, Typography, Alert } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { Container, Box, Typography, Alert, IconButton } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { useGenerateSOAPNote, useUpdateSOAPNote } from "@/hooks/useSoapApi";
 import { useListPatients, useGetPatientVisits } from "@/hooks/usePatientsApi";
 import {
@@ -39,6 +41,7 @@ const formatFileSize = (sizeInBytes: number) => {
 };
 
 export const SOAPGeneratePage: React.FC = () => {
+  const navigate = useNavigate();
   const [transcript, setTranscript] = useState("");
   const [patientId, setPatientId] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -259,10 +262,17 @@ export const SOAPGeneratePage: React.FC = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
       <Container maxWidth="lg" sx={{ mt: 5, mb: 6 }}>
-        <Box mb={4}>
-          <Typography variant="h4" component="h1" fontWeight={800} gutterBottom>
+        {/* Header */}
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton onClick={() => navigate("/dashboard")}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
             Generate SOAP Notes
           </Typography>
+        </Box>
+
+        <Box sx={{ mb: 4 }}>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
             Create AI-powered SOAP notes by selecting a patient, choosing their session, and providing patient conversation transcripts.
           </Typography>

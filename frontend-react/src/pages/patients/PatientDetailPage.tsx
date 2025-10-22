@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Container, Box, CircularProgress, Alert, Stack } from "@mui/material";
+import { Container, Box, CircularProgress, Alert, Stack, IconButton, Typography } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useGetPatient,
@@ -137,6 +138,15 @@ export const PatientDetailPage: React.FC = () => {
   return (
     <div>
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        {/* Header */}
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton onClick={() => navigate("/patients")}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
+            Patient Details
+          </Typography>
+        </Box>
         {patientLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
             <CircularProgress />

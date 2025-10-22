@@ -25,13 +25,14 @@ import {
   Visibility,
   Edit,
   Delete,
+  ArrowBack,
 } from "@mui/icons-material";
 import { useListPatients } from "../../hooks/usePatientsApi";
 import { AddPatientModal } from "../../components/modals/AddPatientModal";
 import { EnhancedCard, EnhancedButton, EnhancedDataTable } from "../../components/ui";
 import { EmptyState } from "../../components/EmptyState";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export const EnhancedPatientsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -189,19 +190,24 @@ export const EnhancedPatientsPage: React.FC = () => {
           gap: 3,
         }}
       >
-        <Box>
-          <Typography
-            variant="h3"
-            component="h1"
-            fontWeight={700}
-            gutterBottom
-            sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
-          >
-            Patient Records
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Search, review, and update your patient roster.
-          </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexGrow: 1 }}>
+          <IconButton onClick={() => navigate("/dashboard")}>
+            <ArrowBack />
+          </IconButton>
+          <Box>
+            <Typography
+              variant="h3"
+              component="h1"
+              fontWeight={700}
+              gutterBottom
+              sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
+            >
+              Patient Records
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Search, review, and update your patient roster.
+            </Typography>
+          </Box>
         </Box>
         <EnhancedButton
           startIcon={<Add />}

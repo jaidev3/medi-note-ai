@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-// navigation not needed; Layout provides header
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Box,
@@ -22,7 +22,7 @@ import {
   Checkbox,
   CircularProgress,
 } from "@mui/material";
-import { CloudUpload, Delete } from "@mui/icons-material";
+import { CloudUpload, Delete, ArrowBack } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useUploadDocument,
@@ -32,6 +32,7 @@ import {
 import { useListSessions } from "@/hooks/useSessionsApi";
 
 export const DocumentUploadPage: React.FC = () => {
+  const navigate = useNavigate();
   useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sessionId, setSessionId] = useState("");
@@ -91,9 +92,15 @@ export const DocumentUploadPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Paper sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
-            Upload Document
-          </Typography>
+          {/* Header */}
+          <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
+            <IconButton onClick={() => navigate(-1)}>
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h5" component="h1" sx={{ flexGrow: 1 }}>
+              Upload Document
+            </Typography>
+          </Box>
 
           {uploadMutation.isSuccess && (
             <Alert severity="success" sx={{ mb: 2 }}>

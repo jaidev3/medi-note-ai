@@ -14,6 +14,7 @@ import {
   useMediaQuery,
   Chip,
   Avatar,
+  IconButton,
 } from "@mui/material";
 import {
   Add,
@@ -24,6 +25,7 @@ import {
   Delete,
   Visibility,
   Edit,
+  ArrowBack,
 } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import { useListSessions, useDeleteSession } from "../../hooks/useSessionsApi";
@@ -190,19 +192,24 @@ export const EnhancedSessionsPage: React.FC = () => {
           flexDirection: { xs: "column", md: "row" },
         }}
       >
-        <Box>
-          <Typography
-            variant="h3"
-            component="h1"
-            fontWeight={700}
-            gutterBottom
-            sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
-          >
-            Patient Visit Sessions
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage and track patient visits and sessions.
-          </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexGrow: 1 }}>
+          <IconButton onClick={() => navigate("/dashboard")}>
+            <ArrowBack />
+          </IconButton>
+          <Box>
+            <Typography
+              variant="h3"
+              component="h1"
+              fontWeight={700}
+              gutterBottom
+              sx={{ fontSize: { xs: "2rem", md: "2.5rem" } }}
+            >
+              Patient Visit Sessions
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage and track patient visits and sessions.
+            </Typography>
+          </Box>
         </Box>
         <EnhancedButton
           startIcon={<Add />}

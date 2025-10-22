@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { Container, Box } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { Container, Box, IconButton, Typography } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import { useQueryKnowledgeBase } from "@/hooks/useRagApi";
 import { useListPatients } from "@/hooks/usePatientsApi";
 import { useListSessions } from "@/hooks/useSessionsApi";
@@ -25,6 +27,7 @@ interface Message {
 }
 
 export const RAGQueryPage: React.FC = () => {
+  const navigate = useNavigate();
   useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -149,6 +152,16 @@ export const RAGQueryPage: React.FC = () => {
           px: { xs: 2, sm: 3 },
         }}
       >
+        {/* Header */}
+        <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
+          <IconButton onClick={() => navigate("/dashboard")}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" component="h1" sx={{ flexGrow: 1 }}>
+            AI Assistant
+          </Typography>
+        </Box>
+
         <RAGHeader
           patientId={patientId}
           sessionId={sessionId}
