@@ -7,7 +7,7 @@ import time
 import json
 from typing import Dict, Any, List
 import structlog
-import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.schemas.ner_schemas import NEROutput, Entity, NERRequest
 
@@ -27,28 +27,46 @@ class NERService:
         try:
             gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
             google_api_key = os.getenv("GOOGLE_API_KEY")
-            
-            logger.info("Initializing Gemini for NER", model=gemini_model)
-            
-            # Configure Gemini API
-            genai.configure(api_key=google_api_key)
-            
-            # Initialize Gemini model
-            self.model = genai.GenerativeModel(
-                model_name=gemini_model,
-                generation_config={
-                    "temperature": 0.1,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,
-                }
+
+            if not google_api_key:
+                raise RuntimeError("GOOGLE_API_KEY environment variable is not set")
+
+            logger.info("Initializing LangChain Gemini chat model for NER", model=gemini_model)
+
+            # Initialize Gemini chat model via LangChain
+            self.model = ChatGoogleGenerativeAI(
+                model=gemini_model,
+                google_api_key=google_api_key,
+                temperature=0.1,
+                max_output_tokens=2048,
+                top_p=0.95,
+                top_k=40,
             )
-            
-            logger.info("✅ Gemini NER model initialized successfully")
-            
+
+            logger.info("✅ LangChain Gemini NER model initialized successfully")
+
         except Exception as e:
-            logger.error("❌ Failed to initialize Gemini NER model", error=str(e))
+            logger.error("❌ Failed to initialize LangChain Gemini NER model", error=str(e))
             raise RuntimeError(f"NER model initialization failed: {e}")
+
+    @staticmethod
+    def _extract_response_text(response: Any) -> str:
+        """Extract plain text from a LangChain chat response."""
+        try:
+            content = getattr(response, "content", response)
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        parts.append(item.get("text", ""))
+                    else:
+                        parts.append(str(item))
+                return "".join(parts)
+            return str(content)
+        except Exception:
+            return str(response)
     
     def _create_ner_prompt(self, text: str, filter_types: List[str] = None) -> str:
         """Create prompt for Gemini to extract biomedical entities."""
@@ -104,11 +122,11 @@ Rules:
             # Create prompt for entity extraction
             prompt = self._create_ner_prompt(request.text, request.filter_types)
             
-            # Generate response from Gemini
-            response = self.model.generate_content(prompt)
-            
+            # Generate response from Gemini via LangChain
+            response = await self.model.ainvoke(prompt)
+
             # Extract JSON from response
-            response_text = response.text.strip()
+            response_text = self._extract_response_text(response).strip()
             
             # Try to extract JSON from the response
             try:

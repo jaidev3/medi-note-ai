@@ -6,7 +6,7 @@
 [![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)](docker-compose.unified.yaml)
 [![AI](https://img.shields.io/badge/AI-powered-orange.svg)](ai_service/)
 [![Backend](https://img.shields.io/badge/backend-FastAPI-green.svg)](backend/)
-[![Frontend](https://img.shields.io/badge/frontend-Next.js-black.svg)](frontend/)
+[![Frontend](https://img.shields.io/badge/frontend-Vite%20%2B%20React-blue.svg)](frontend-react/)
 
 ---
 
@@ -21,7 +21,7 @@ MediNote AI revolutionizes healthcare documentation by using advanced AI to auto
 - 🔍 **RAG-based Queries** - Intelligent patient data retrieval using vector embeddings
 - 📄 **Document Management** - Secure local file storage and processing
 - 📊 **Real-time Monitoring** - Comprehensive service health and performance tracking
-- 🌐 **Modern UI/UX** - Responsive Next.js interface with Tailwind CSS
+- 🌐 **Modern UI/UX** - Responsive Vite + React interface with Tailwind CSS
 
 ---
 
@@ -49,9 +49,9 @@ MediNote AI follows a **microservice architecture** with clear separation betwee
 │           ▲                      ▲                 ▲        │
 │           │                      │                 │        │
 │  ┌────────▼────┐        ┌────────▼─────┐     ┌─────▼──────┐ │
-│  │ Next.js     │        │    Local     │     │  Model     │ │
+│  │ Vite        │        │    Local     │     │  Model     │ │
 │  │ Frontend    │        │  Document    │     │  Cache     │ │
-│  │ (Port 3000) │        │   Storage    │     │  Volume    │ │
+│  │ (Port 5173) │        │   Storage    │     │  Volume    │ │
 │  └─────────────┘        └──────────────┘     └────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -163,7 +163,7 @@ MediNote AI follows a **microservice architecture** with clear separation betwee
 
 | Component            | Technology            | Purpose                          |
 | -------------------- | --------------------- | -------------------------------- |
-| **Framework**        | Next.js 15            | React-based full-stack framework |
+| **Framework**        | Vite (React)          | Frontend dev server & build tool |
 | **UI Library**       | React 19              | Modern component-based UI        |
 | **Styling**          | Tailwind CSS 4        | Utility-first CSS framework      |
 | **Components**       | Radix UI              | Accessible component library     |
@@ -189,29 +189,18 @@ MediNote AI follows a **microservice architecture** with clear separation betwee
 ### **Application Structure**
 
 ```
-frontend/
-├── app/                    # Next.js 13+ App Router
-│   ├── (auth)/            # Authentication pages
-│   │   ├── login/         # User login
-│   │   └── register/      # User registration
-│   ├── dashboard/         # Main dashboard
-│   ├── patients/          # Patient management
-│   │   ├── [id]/         # Patient details
-│   │   └── new/          # Add new patient
-│   ├── sessions/          # Visit sessions
-│   │   ├── [id]/         # Session details
-│   │   └── new/          # New session
-│   ├── documents/         # Document management
-│   │   ├── upload/       # File upload
-│   │   └── [id]/view/    # Document viewer
-│   ├── soap/             # SOAP note management
-│   │   ├── generate/     # SOAP generation
-│   │   └── notes/[id]/   # Note viewer
-│   └── rag/              # RAG queries
-│       └── query/        # Knowledge base search
-├── components/ui/         # Reusable UI components
-├── lib/                  # Utility functions
-└── routes/               # API route configurations
+frontend-react/
+├── index.html             # Vite entry HTML
+├── package.json           # Frontend scripts and deps
+├── src/
+│   ├── main.tsx          # App bootstrap
+│   ├── App.tsx           # Root app component
+│   ├── index.css
+│   ├── components/
+│   ├── contexts/
+│   ├── hooks/
+│   └── pages/            # Route-based pages or components
+└── public/               # Static assets
 ```
 
 ### **User Journey Flows**
@@ -357,7 +346,7 @@ interface ComponentState {
 ### **6. 🚀 Developer-Friendly Infrastructure**
 
 - **One-Command Deployment**: Unified Docker Compose setup
-- **Modern Tooling**: uv for Python, Next.js 15, TypeScript
+- **Modern Tooling**: uv for Python, Vite + React, TypeScript
 - **Comprehensive Testing**: Automated testing for all components
 - **Clear Documentation**: Extensive docs and architecture guides
 
@@ -471,13 +460,13 @@ LIMIT 10;
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd echo-notes-service
+cd medi-note-ai
 
 # Copy environment templates
 cp .env.sample .env
 cp backend/.env.sample backend/.env
 cp ai_service/.env.sample ai_service/.env
-cp frontend/.env.sample frontend/.env.local
+cp frontend-react/.env.sample frontend-react/.env.local
 
 # Update with your API keys
 # Edit .env files with actual OpenAI and HuggingFace keys
@@ -491,6 +480,11 @@ run-dev-unified.bat
 
 # Linux/Mac
 ./run-dev-unified.sh
+
+# Frontend (local development with Vite)
+cd frontend-react
+npm install
+npm run dev
 ```
 
 ### **3. Production Deployment**
@@ -508,7 +502,7 @@ docker-compose -f docker-compose.unified.yaml up --build -d
 After deployment, access the application at:
 
 - **🌐 Main Application**: http://localhost
-- **🎨 Frontend**: http://localhost:3000
+- **🎨 Frontend (Vite dev)**: http://localhost:5173
 - **🖥️ Backend API**: http://localhost:8001
 - **🤖 AI Service**: http://localhost:8002
 - **📚 API Documentation**:
@@ -587,7 +581,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **OpenAI** - For GPT-4 and embedding models
 - **HuggingFace** - For biomedical LLaMA models
 - **Microsoft** - For Presidio PII detection
-- **Vercel** - For Next.js framework
+- **Vercel** - For frontend deployments
 - **FastAPI Team** - For the excellent web framework
 
 ---

@@ -1,26 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Typography,
-  Button,
-  Container,
-  Paper,
-  Box,
-  CircularProgress,
-  Alert,
-  TextField,
-  Grid,
-  Stack,
-  Chip,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Pagination,
-} from "@mui/material";
-import { Delete } from "@mui/icons-material";
+import { Container, Box, CircularProgress, Alert, Stack } from "@mui/material";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useGetPatient,
@@ -29,6 +9,11 @@ import {
   useDeletePatient,
 } from "@/hooks/usePatientsApi";
 import { SessionResponse } from "@/lib";
+import {
+  PatientInfoForm,
+  PatientOverview,
+  VisitHistorySection,
+} from "@/components/patients";
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "Not available";
@@ -145,6 +130,10 @@ export const PatientDetailPage: React.FC = () => {
     }
   };
 
+  const handleViewSession = (sessionId: string) => {
+    navigate(`/sessions/${sessionId}`);
+  };
+
   return (
     <div>
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
@@ -162,221 +151,32 @@ export const PatientDetailPage: React.FC = () => {
               <Alert severity={feedback.type}>{feedback.message}</Alert>
             )}
 
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Patient Information
-              </Typography>
-              <Box component="form" onSubmit={handleUpdate}>
-                <TextField
-                  label="Full Name"
-                  name="name"
-                  value={formState.name}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                />
+            <PatientInfoForm
+              formState={formState}
+              isDirty={isDirty}
+              isUpdating={updatePatientMutation.isPending}
+              isDeleting={deletePatientMutation.isPending}
+              onInputChange={handleChange}
+              onSubmit={handleUpdate}
+              onDelete={handleDelete}
+            />
 
-                <TextField
-                  label="Email"
-                  name="email"
-                  value={formState.email}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  type="email"
-                />
+            <PatientOverview
+              patient={patient}
+              formatDateTime={formatDateTime}
+            />
 
-                <TextField
-                  label="Phone"
-                  name="phone"
-                  value={formState.phone}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                />
-
-                <TextField
-                  label="Address"
-                  name="address"
-                  value={formState.address}
-                  onChange={handleChange}
-                  fullWidth
-                  margin="normal"
-                  multiline
-                  minRows={3}
-                />
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 3,
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<Delete />}
-                    onClick={handleDelete}
-                    disabled={deletePatientMutation.isPending}
-                  >
-                    Delete Patient
-                  </Button>
-                  <Button
-                    variant="contained"
-                    type="submit"
-                    disabled={!isDirty || updatePatientMutation.isPending}
-                  >
-                    {updatePatientMutation.isPending
-                      ? "Saving..."
-                      : "Save Changes"}
-                  </Button>
-                </Box>
-              </Box>
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Overview
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Patient ID
-                  </Typography>
-                  <Typography variant="body1" sx={{ wordBreak: "break-word" }}>
-                    {patient.id}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Visits
-                  </Typography>
-                  <Typography variant="body1">
-                    {patient.total_visits}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Last Visit
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDateTime(patient.last_visit)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Created
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDateTime(patient.created_at)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Updated
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDateTime(patient.updated_at)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 2 }}
-              >
-                <Typography variant="h6">Visit History</Typography>
-                <Stack direction="row" spacing={1}>
-                  <Chip
-                    label={`Total: ${patient.total_visits}`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  {patient.last_visit && (
-                    <Chip
-                      label={`Last visit: ${formatDateTime(
-                        patient.last_visit
-                      )}`}
-                      variant="outlined"
-                    />
-                  )}
-                </Stack>
-              </Stack>
-
-              {visitsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                  <CircularProgress size={28} />
-                </Box>
-              ) : visitsError ? (
-                <Alert severity="error">Failed to load visit history.</Alert>
-              ) : visits.length === 0 ? (
-                <Alert severity="info">
-                  No sessions recorded for this patient yet.
-                </Alert>
-              ) : (
-                <Box>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Visit Date</TableCell>
-                          <TableCell>Notes</TableCell>
-                          <TableCell>Documents</TableCell>
-                          <TableCell>SOAP Notes</TableCell>
-                          <TableCell align="right">Actions</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {visits.map((session) => (
-                          <TableRow key={session.session_id} hover>
-                            <TableCell>
-                              {formatDateTime(session.visit_date)}
-                            </TableCell>
-                            <TableCell sx={{ maxWidth: 260 }}>
-                              {session.notes ? session.notes : "—"}
-                            </TableCell>
-                            <TableCell>{session.document_count}</TableCell>
-                            <TableCell>{session.soap_note_count}</TableCell>
-                            <TableCell align="right">
-                              <Button
-                                size="small"
-                                onClick={() =>
-                                  navigate(`/sessions/${session.session_id}`)
-                                }
-                              >
-                                View
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  {visitTotalPages > 1 && (
-                    <Box
-                      sx={{ display: "flex", justifyContent: "center", mt: 2 }}
-                    >
-                      <Pagination
-                        count={visitTotalPages}
-                        page={visitsPage}
-                        onChange={(_, page) => setVisitsPage(page)}
-                        color="primary"
-                        size="small"
-                      />
-                    </Box>
-                  )}
-                </Box>
-              )}
-            </Paper>
+            <VisitHistorySection
+              patient={patient}
+              visits={visits}
+              isLoading={visitsLoading}
+              error={visitsError}
+              currentPage={visitsPage}
+              totalPages={visitTotalPages}
+              formatDateTime={formatDateTime}
+              onPageChange={setVisitsPage}
+              onViewSession={handleViewSession}
+            />
           </Stack>
         )}
       </Container>

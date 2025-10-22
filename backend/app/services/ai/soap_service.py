@@ -10,7 +10,7 @@ import re
 from typing import Dict, Any, Optional
 from datetime import datetime
 import structlog
-import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.schemas.soap_schemas import (
     SOAPNote, SOAPSection, SOAPGenerationRequest, 
@@ -38,47 +38,66 @@ class SOAPGenerationService:
             gemini_model = os.getenv("GEMINI_MODEL") or os.getenv("AI_SERVICE_GEMINI_MODEL") or os.getenv("GOOGLE_MODEL") or "gemini-mini"
             temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
             
-            logger.info("Initializing Gemini models for SOAP generation and Judge validation")
-            
-            # Configure Gemini API
-            genai.configure(api_key=google_api_key)
-            
-            # Initialize Gemini model for SOAP generation
-            try:
-                self.soap_model = genai.GenerativeModel(
-                    model_name=gemini_model,
-                    generation_config={
-                        "temperature": temperature,
-                        "top_p": 0.95,
-                        "top_k": 40,
-                        "max_output_tokens": 2048,
-                    }
-                )
-            except Exception as e:
-                logger.error("Failed to initialize Gemini SOAP model", model=gemini_model, error=str(e))
-                # Re-raise with clearer guidance
-                raise RuntimeError(f"Failed to initialize Gemini model '{gemini_model}': {e}\nCheck your AI_SERVICE_GEMINI_MODEL/GEMINI_MODEL env vars and the Google Generative AI SDK compatibility.")
-            
-            # Initialize Gemini model for Judge validation
-            try:
-                self.judge_model = genai.GenerativeModel(
-                    model_name=gemini_model,
-                    generation_config={
-                        "temperature": 0.1,
-                        "top_p": 0.95,
-                        "top_k": 40,
-                        "max_output_tokens": 1024,
-                    }
-                )
-            except Exception as e:
-                logger.error("Failed to initialize Gemini Judge model", model=gemini_model, error=str(e))
-                raise RuntimeError(f"Failed to initialize Gemini Judge model '{gemini_model}': {e}")
+            if not google_api_key:
+                raise RuntimeError("GOOGLE_API_KEY environment variable is not set")
 
-            logger.info("✅ Gemini models initialized for SOAP and Judge")
+            logger.info("Initializing LangChain Gemini models for SOAP generation and Judge validation")
+
+            # Initialize Gemini model for SOAP generation via LangChain
+            try:
+                self.soap_model = ChatGoogleGenerativeAI(
+                    model=gemini_model,
+                    google_api_key=google_api_key,
+                    temperature=temperature,
+                    max_output_tokens=2048,
+                    top_p=0.95,
+                    top_k=40,
+                )
+            except Exception as e:
+                logger.error("Failed to initialize LangChain Gemini SOAP model", model=gemini_model, error=str(e))
+                raise RuntimeError(
+                    f"Failed to initialize LangChain Gemini model '{gemini_model}': {e}\n"
+                    "Verify your AI_SERVICE_GEMINI_MODEL/GEMINI_MODEL env vars and LangChain configuration."
+                )
+
+            # Initialize Gemini model for Judge validation via LangChain
+            try:
+                self.judge_model = ChatGoogleGenerativeAI(
+                    model=gemini_model,
+                    google_api_key=google_api_key,
+                    temperature=0.1,
+                    max_output_tokens=1024,
+                    top_p=0.95,
+                    top_k=40,
+                )
+            except Exception as e:
+                logger.error("Failed to initialize LangChain Gemini Judge model", model=gemini_model, error=str(e))
+                raise RuntimeError(f"Failed to initialize LangChain Gemini Judge model '{gemini_model}': {e}")
+
+            logger.info("✅ LangChain Gemini models initialized for SOAP and Judge")
             
         except Exception as e:
-            logger.error("❌ Failed to initialize Gemini models", error=str(e))
+            logger.error("❌ Failed to initialize LangChain Gemini models", error=str(e))
             raise RuntimeError(f"Model initialization failed: {e}")
+
+    @staticmethod
+    def _extract_response_text(response: Any) -> str:
+        """Extract the textual payload from a LangChain chat response."""
+        try:
+            content = getattr(response, "content", response)
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        parts.append(item.get("text", ""))
+                    else:
+                        parts.append(str(item))
+                return "".join(parts)
+            return str(content)
+        except Exception:
+            return str(response)
     
     def _extract_json_from_text(self, text: str) -> Dict[str, Any]:
         """
@@ -258,23 +277,8 @@ Return ONLY the JSON assessment, no additional text."""
         """
         try:
             prompt = self._create_judge_prompt(soap_note)
-            response = self.judge_model.generate_content(prompt)
-            # generative.ai responses differ by SDK version; try common access patterns
-            response_text = None
-            try:
-                response_text = response.text.strip()
-            except Exception:
-                try:
-                    # newer SDKs may put text under .output[0].content[0].text
-                    response_text = response.output[0].content[0].text.strip()
-                except Exception:
-                    try:
-                        # dict-like access
-                        response_text = (response.get("candidates")[0].get("content") if isinstance(response, dict) and response.get("candidates") else None)
-                        if isinstance(response_text, str):
-                            response_text = response_text.strip()
-                    except Exception:
-                        response_text = str(response)
+            response = await self.judge_model.ainvoke(prompt)
+            response_text = self._extract_response_text(response).strip()
             
             # Parse JSON response
             try:
@@ -352,9 +356,9 @@ Return ONLY the JSON assessment, no additional text."""
                     # Create prompt
                     prompt = self._create_soap_prompt(processed_text, context_data)
                     
-                    # Call Gemini model
-                    response = self.soap_model.generate_content(prompt)
-                    response_text = response.text.strip()
+                    # Call Gemini model via LangChain
+                    response = await self.soap_model.ainvoke(prompt)
+                    response_text = self._extract_response_text(response).strip()
                     
                     logger.info("✅ Gemini SOAP model responded", response_length=len(response_text))
                     

@@ -7,8 +7,8 @@ import os
 import structlog
 import json
 import re
-from typing import List, Optional, Tuple
-import google.generativeai as genai
+from typing import Any, List, Optional, Tuple
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.schemas.pii_schemas import (
     PIIAnalysisRequest, PIIAnalysisResponse, PIIEntity,
@@ -26,21 +26,20 @@ class PIIService:
         try:
             google_api_key = os.getenv("GOOGLE_API_KEY")
             gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-            
-            logger.info("🔍 Initializing PII service with Gemini")
-            
-            # Configure Gemini API
-            genai.configure(api_key=google_api_key)
-            
-            # Initialize Gemini model
-            self.model = genai.GenerativeModel(
-                model_name=gemini_model,
-                generation_config={
-                    "temperature": 0.1,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,
-                }
+
+            if not google_api_key:
+                raise RuntimeError("GOOGLE_API_KEY environment variable is not set")
+
+            logger.info("🔍 Initializing PII service with LangChain Gemini chat model")
+
+            # Initialize Gemini chat model via LangChain
+            self.model = ChatGoogleGenerativeAI(
+                model=gemini_model,
+                google_api_key=google_api_key,
+                temperature=0.1,
+                max_output_tokens=2048,
+                top_p=0.95,
+                top_k=40,
             )
             
             # Set default entities to detect
@@ -54,11 +53,30 @@ class PIIService:
             # Set default score threshold
             self.default_score_threshold = float(os.getenv("PII_CONFIDENCE_THRESHOLD", "0.5"))
             
-            logger.info("✅ PII service initialized successfully with Gemini")
+            logger.info("✅ PII service initialized successfully with LangChain Gemini")
             
         except Exception as e:
-            logger.error("❌ Failed to initialize PII service", error=str(e))
+            logger.error("❌ Failed to initialize LangChain PII service", error=str(e))
             raise RuntimeError(f"PII service initialization failed: {e}")
+
+    @staticmethod
+    def _extract_response_text(response: Any) -> str:
+        """Extract plain text from a LangChain chat response."""
+        try:
+            content = getattr(response, "content", response)
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        parts.append(item.get("text", ""))
+                    else:
+                        parts.append(str(item))
+                return "".join(parts)
+            return str(content)
+        except Exception:
+            return str(response)
     
     def _create_analysis_prompt(self, text: str, entities: List[str]) -> str:
         """Create prompt for Gemini to analyze PII."""
@@ -144,9 +162,9 @@ Rules:
             # Create prompt
             prompt = self._create_analysis_prompt(request.text, entities_to_detect)
             
-            # Generate response from Gemini
-            response = self.model.generate_content(prompt)
-            response_text = response.text.strip()
+            # Generate response from Gemini via LangChain
+            response = await self.model.ainvoke(prompt)
+            response_text = self._extract_response_text(response).strip()
             
             # Parse JSON response
             try:
@@ -250,9 +268,9 @@ Rules:
                 request.preserve_medical_context
             )
             
-            # Generate response from Gemini
-            response = self.model.generate_content(prompt)
-            response_text = response.text.strip()
+            # Generate response from Gemini via LangChain
+            response = await self.model.ainvoke(prompt)
+            response_text = self._extract_response_text(response).strip()
             
             # Parse JSON response
             try:

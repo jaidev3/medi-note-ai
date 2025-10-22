@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usersApi, ProfessionalUpdateRequest } from "@/lib";
+import { usersApi, ProfessionalUpdateRequest, ProfessionalListResponse } from "@/lib";
 
 // Get user stats query
 export const useGetUserStats = () => {
@@ -50,16 +50,17 @@ export const useGetUser = (id: string) => {
   });
 };
 
-// List users query
-export const useListUsers = () => {
+// List users (professionals) query
+export const useListUsers = (page: number = 1, pageSize: number = 100, search?: string) => {
   return useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", page, pageSize, search],
     queryFn: () => {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("No access token found");
-      return usersApi.listUsers(token);
+      return usersApi.listUsers(token, page, pageSize, search);
     },
     enabled: !!localStorage.getItem("access_token"),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

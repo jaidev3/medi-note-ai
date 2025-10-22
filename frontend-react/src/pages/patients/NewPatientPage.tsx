@@ -58,15 +58,20 @@ export const NewPatientPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header provided by Layout */}
-
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="sm" sx={{ mt: 6, mb: 6 }}>
+        <Paper
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            border: "1px solid #e8ebf8",
+            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+          }}
+        >
+          <Typography variant="h5" component="h1" fontWeight={800} gutterBottom>
             Add Patient Record
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
             Capture essential patient details. You can update this information
             later.
           </Typography>
@@ -86,6 +91,13 @@ export const NewPatientPage: React.FC = () => {
               fullWidth
               margin="normal"
               required
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
             />
 
             <TextField
@@ -96,6 +108,13 @@ export const NewPatientPage: React.FC = () => {
               fullWidth
               margin="normal"
               type="email"
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
             />
 
             <TextField
@@ -105,6 +124,13 @@ export const NewPatientPage: React.FC = () => {
               onChange={handleChange}
               fullWidth
               margin="normal"
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
             />
 
             <TextField
@@ -116,6 +142,13 @@ export const NewPatientPage: React.FC = () => {
               margin="normal"
               multiline
               minRows={3}
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover fieldset": { borderColor: "#667eea" },
+                },
+              }}
             />
 
             <Box
@@ -123,16 +156,35 @@ export const NewPatientPage: React.FC = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                mt: 3,
+                mt: 4,
+                gap: 2,
               }}
             >
-              <Button variant="outlined" onClick={() => navigate(-1)}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate(-1)}
+                sx={{
+                  borderColor: "#e8ebf8",
+                  color: "#667eea",
+                  fontWeight: 600,
+                  "&:hover": { backgroundColor: "rgba(102, 126, 234, 0.04)" },
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 variant="contained"
                 type="submit"
                 disabled={createPatientMutation.isPending}
+                sx={{
+                  fontWeight: 700,
+                  textTransform: "none",
+                  "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+                  },
+                  transition: "all 0.3s ease",
+                }}
               >
                 {createPatientMutation.isPending ? (
                   <CircularProgress size={24} color="inherit" />

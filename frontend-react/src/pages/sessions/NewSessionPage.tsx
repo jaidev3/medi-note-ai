@@ -68,11 +68,21 @@ export const NewSessionPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom>
+    <div className="min-h-screen" style={{ backgroundColor: "#f5f7fb" }}>
+      <Container maxWidth="sm" sx={{ mt: 6, mb: 6 }}>
+        <Paper
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            border: "1px solid #e8ebf8",
+            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+          }}
+        >
+          <Typography variant="h5" component="h1" fontWeight={800} gutterBottom>
             Create Patient Visit Session
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+            Record a new patient visit session.
           </Typography>
 
           {patientsLoading ? (
@@ -103,6 +113,12 @@ export const NewSessionPage: React.FC = () => {
                   label="Patient"
                   onChange={(event) => setPatientId(event.target.value)}
                   required
+                  sx={{
+                    borderRadius: 2,
+                    "& .MuiOutlinedInput-root": {
+                      "&:hover fieldset": { borderColor: "#667eea" },
+                    },
+                  }}
                 >
                   {patients.map((patient) => (
                     <MenuItem key={patient.id} value={patient.id}>
@@ -120,6 +136,13 @@ export const NewSessionPage: React.FC = () => {
                 value={visitDate}
                 onChange={(event) => setVisitDate(event.target.value)}
                 InputLabelProps={{ shrink: true }}
+                variant="outlined"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    "&:hover fieldset": { borderColor: "#667eea" },
+                  },
+                }}
               />
 
               <TextField
@@ -131,6 +154,13 @@ export const NewSessionPage: React.FC = () => {
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Add optional notes about the visit"
+                variant="outlined"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    "&:hover fieldset": { borderColor: "#667eea" },
+                  },
+                }}
               />
 
               <Box
@@ -138,16 +168,35 @@ export const NewSessionPage: React.FC = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  mt: 3,
+                  mt: 4,
+                  gap: 2,
                 }}
               >
-                <Button variant="outlined" onClick={() => navigate(-1)}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate(-1)}
+                  sx={{
+                    borderColor: "#e8ebf8",
+                    color: "#667eea",
+                    fontWeight: 600,
+                    "&:hover": { backgroundColor: "rgba(102, 126, 234, 0.04)" },
+                  }}
+                >
                   Cancel
                 </Button>
                 <Button
                   variant="contained"
                   type="submit"
                   disabled={createSessionMutation.isPending}
+                  sx={{
+                    fontWeight: 700,
+                    textTransform: "none",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 12px 24px rgba(102, 126, 234, 0.4)",
+                    },
+                    transition: "all 0.3s ease",
+                  }}
                 >
                   {createSessionMutation.isPending
                     ? "Creating..."
