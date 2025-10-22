@@ -4,27 +4,13 @@ import {
   Container,
   Box,
   Typography,
-  Button,
-  TextField,
-  Stack,
-  Alert,
-  Avatar,
   useTheme,
   useMediaQuery,
   Grid,
-  Divider,
-  CircularProgress,
+  Alert,
 } from "@mui/material";
 import {
-  Person,
-  Email,
-  Business,
-  Badge,
-  Phone,
   ArrowBack,
-  Save,
-  CheckCircle,
-  Error as ErrorIcon,
 } from "@mui/icons-material";
 import { useAuth } from "@/hooks/useAuth";
 import { useUpdateProfessional } from "@/hooks/useUsersApi";
@@ -64,7 +50,7 @@ export const SettingsPage: React.FC = () => {
   }, [user?.id]);
 
   const handleFieldChange =
-    (field: keyof typeof formState) =>
+    (field: string) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setFormState((prev) => ({ ...prev, [field]: event.target.value }));
       setHasChanges(true);

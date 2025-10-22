@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem,
   Avatar,
-  IconButton,
   Menu,
   MenuItem as MenuItemInner,
   Dialog,
@@ -25,7 +24,6 @@ import {
 import {
   ClearAll as ClearAllIcon,
   FileDownload as FileDownloadIcon,
-  MoreVert as MoreVertIcon,
   Person as PersonIcon,
   MedicalServices as MedicalIcon,
   History as HistoryIcon,

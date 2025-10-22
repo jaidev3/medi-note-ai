@@ -20,5 +20,3 @@ export * from "./useRagApi";
 // Users hooks
 export * from "./useUsersApi";
 
-// Professionals hooks
-export * from "./useProfessionalsApi";

@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem,
   useTheme,
-  useMediaQuery,
   Chip,
   Avatar,
   IconButton,
@@ -22,9 +21,6 @@ import {
   Person,
   Description,
   Folder,
-  Delete,
-  Visibility,
-  Edit,
   ArrowBack,
 } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
@@ -39,7 +35,6 @@ const PAGE_SIZE = 10;
 export const EnhancedSessionsPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   useAuth();
   
   const [page, setPage] = useState(1);
@@ -59,7 +54,6 @@ export const EnhancedSessionsPage: React.FC = () => {
 
   const sessions = data?.sessions || [];
   const totalCount = data?.total_count || 0;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const patients = patientsData?.patients || [];
   
   const patientNameMap = useMemo(() => {
@@ -282,7 +276,7 @@ export const EnhancedSessionsPage: React.FC = () => {
             rowsPerPage={PAGE_SIZE}
             totalRows={totalCount}
             onPageChange={(_, newPage) => setPage(newPage + 1)}
-            onRowsPerPageChange={(event) => {
+            onRowsPerPageChange={() => {
               setPage(1);
               // Handle rows per page change if needed
             }}

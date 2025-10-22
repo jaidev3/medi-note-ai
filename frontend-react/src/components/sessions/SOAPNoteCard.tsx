@@ -111,8 +111,7 @@ export const SOAPNoteCard: React.FC<SOAPNoteCardProps> = ({
                 {section.toUpperCase()}
               </Typography>
               <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                {/* @ts-ignore */}
-                {secData?.content ?? JSON.stringify(secData)}
+                {(secData as { content?: string })?.content ?? JSON.stringify(secData)}
               </Typography>
             </Grid>
           ))}

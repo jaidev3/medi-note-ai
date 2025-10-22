@@ -8,7 +8,6 @@ import {
   CircularProgress,
   Alert,
   useTheme,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Description,
@@ -26,7 +25,6 @@ import { EmptyState } from "../../components/EmptyState";
 export const EnhancedDashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   useAuth();
 
   const {

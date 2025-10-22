@@ -4,10 +4,8 @@ import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
-import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import PersonAdd from "@mui/icons-material/PersonAdd";
 import Settings from "@mui/icons-material/Settings";
 import Logout from "@mui/icons-material/Logout";
 
@@ -100,20 +98,7 @@ export default function AccountMenu({ user, onNavigate, onLogout }: Props) {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        {/* <MenuItem onClick={() => handleNavigate('/profile')}>
-          <Avatar /> Profile
-        </MenuItem>
-        <MenuItem onClick={() => handleNavigate('/account')}>
-          <Avatar /> My account
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => handleNavigate('/account/add')}>
-          <ListItemIcon>
-            <PersonAdd fontSize="small" />
-          </ListItemIcon>
-          Add another account
-        </MenuItem> */}
-        <MenuItem onClick={() => handleNavigate("/settings")}>
+          <MenuItem onClick={() => handleNavigate("/settings")}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>

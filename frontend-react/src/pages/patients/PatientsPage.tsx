@@ -4,16 +4,13 @@ import {
   Container,
   Box,
   Typography,
-  Paper,
   CircularProgress,
   Alert,
   TextField,
   useTheme,
-  useMediaQuery,
-  Grid,
   Chip,
-  Avatar,
   IconButton,
+  Avatar,
 } from "@mui/material";
 import {
   Add,
@@ -22,9 +19,6 @@ import {
   Email,
   Phone,
   CalendarToday,
-  Visibility,
-  Edit,
-  Delete,
   ArrowBack,
 } from "@mui/icons-material";
 import { useListPatients } from "../../hooks/usePatientsApi";
@@ -37,7 +31,6 @@ const PAGE_SIZE = 10;
 export const EnhancedPatientsPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -62,10 +55,6 @@ export const EnhancedPatientsPage: React.FC = () => {
 
   const patients = useMemo(() => data?.patients ?? [], [data?.patients]);
   const totalCount = data?.total_count ?? 0;
-  const totalPages = useMemo(
-    () => (totalCount === 0 ? 1 : Math.ceil(totalCount / PAGE_SIZE)),
-    [totalCount]
-  );
 
   const handleRetry = () => {
     refetch();
@@ -77,11 +66,7 @@ export const EnhancedPatientsPage: React.FC = () => {
     setOrderBy(property);
   };
 
-  const formatLastVisit = (date: string) => {
-    if (!date) return "Not recorded";
-    return new Date(date).toLocaleDateString();
-  };
-
+  
   const columns = [
     {
       id: "name",
@@ -289,7 +274,7 @@ export const EnhancedPatientsPage: React.FC = () => {
             rowsPerPage={PAGE_SIZE}
             totalRows={totalCount}
             onPageChange={(_, newPage) => setPage(newPage + 1)}
-            onRowsPerPageChange={(event) => {
+            onRowsPerPageChange={() => {
               setPage(1);
               // Handle rows per page change if needed
             }}

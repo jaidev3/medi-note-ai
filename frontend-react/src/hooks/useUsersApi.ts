@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usersApi, ProfessionalUpdateRequest, ProfessionalListResponse } from "@/lib";
+import { usersApi, ProfessionalUpdateRequest } from "@/lib";
 
 // Get user stats query
 export const useGetUserStats = () => {

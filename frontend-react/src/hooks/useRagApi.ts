@@ -3,13 +3,10 @@ import {
   ragApi,
   RAGQueryRequest,
   RAGEmbeddingRequest,
-  RAGBatchEmbeddingRequest,
-  RAGSimilaritySearchRequest,
   RAGEmbeddingStatsResponse,
   RAGNotesNeedingEmbeddingRequest,
   RAGNoteNeedingEmbedding,
   RAGEmbeddingResponse,
-  RAGSimilaritySearchResponse,
 } from "@/lib";
 
 // Query knowledge base mutation
@@ -34,43 +31,6 @@ export const useGenerateEmbeddings = () => {
   });
 };
 
-export const useBatchEmbedSOAPNotes = () => {
-  return useMutation<RAGEmbeddingResponse, Error, RAGBatchEmbeddingRequest>({
-    mutationFn: (data: RAGBatchEmbeddingRequest) => {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No access token found");
-      return ragApi.batchEmbedSOAPNotes(data, token);
-    },
-  });
-};
-
-export const useFindSimilarNotes = () => {
-  return useMutation<
-    RAGSimilaritySearchResponse,
-    Error,
-    { noteId: string; topK?: number }
-  >({
-    mutationFn: ({ noteId, topK = 5 }: { noteId: string; topK?: number }) => {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No access token found");
-      return ragApi.findSimilarNotes(noteId, token, topK);
-    },
-  });
-};
-
-export const useSearchRAGBySimilarity = () => {
-  return useMutation<
-    RAGSimilaritySearchResponse,
-    Error,
-    RAGSimilaritySearchRequest
-  >({
-    mutationFn: (data: RAGSimilaritySearchRequest) => {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("No access token found");
-      return ragApi.searchBySimilarity(data, token);
-    },
-  });
-};
 
 export const useRagEmbeddingStats = () => {
   return useMutation<RAGEmbeddingStatsResponse, Error, { patientId?: string }>({

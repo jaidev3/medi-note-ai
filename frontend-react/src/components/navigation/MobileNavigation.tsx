@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Box,
   Drawer,
@@ -11,12 +11,10 @@ import {
   Toolbar,
   Typography,
   Divider,
-  Badge,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
 import {
-  Menu as MenuIcon,
   Dashboard,
   People,
   Event,

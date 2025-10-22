@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Table,
   TableBody,
@@ -11,8 +11,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Chip,
-  Avatar,
   useTheme,
   useMediaQuery,
   Card,
@@ -23,7 +21,6 @@ import {
   Visibility,
   Edit,
   Delete,
-  MoreVert,
   ArrowUpward,
   ArrowDownward,
 } from "@mui/icons-material";
@@ -69,7 +66,6 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
   onEdit,
   onDelete,
   onView,
-  loading = false,
   emptyMessage = "No data available",
   orderBy,
   order,
@@ -77,19 +73,6 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedRow, setSelectedRow] = useState<any>(null);
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, row: any) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setSelectedRow(row);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedRow(null);
-  };
 
   const handleSort = (property: string) => {
     if (onRequestSort) {
@@ -124,12 +107,7 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
                 <Typography variant="h6" fontWeight={600}>
                   {row[columns[0].id] || "Untitled"}
                 </Typography>
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleMenuClick(e, row)}
-                >
-                  <MoreVert />
-                </IconButton>
+                <></>
               </Box>
             </Grid>
             

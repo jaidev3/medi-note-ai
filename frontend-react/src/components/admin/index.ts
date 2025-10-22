@@ -5,4 +5,3 @@ export { SessionsManagement } from "./SessionsManagement";
 export { DocumentsManagement } from "./DocumentsManagement";
 export { SystemSettings } from "./SystemSettings";
 export { AdminSidebar } from "./AdminSidebar";
-export { AdminAccessButton } from "./AdminAccessButton";

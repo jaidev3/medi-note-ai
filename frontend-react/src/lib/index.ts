@@ -5,7 +5,6 @@ export { sessionsApi } from "./sessions";
 export { soapApi } from "./soap";
 export { ragApi } from "./rag";
 export { usersApi } from "./users";
-export { professionalsApi } from "./professionals";
 export { API_BASE_URL, API_ENDPOINTS, ApiError } from "./api-config";
 
 export type {
@@ -67,7 +66,3 @@ export type {
   RAGNoteNeedingEmbedding,
 } from "./rag";
 export type { UserStatsResponse, ProfessionalUpdateRequest } from "./users";
-export type {
-  ProfessionalResponse,
-  ProfessionalListResponse,
-} from "./professionals";

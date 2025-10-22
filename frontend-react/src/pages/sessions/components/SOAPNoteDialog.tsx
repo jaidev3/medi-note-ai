@@ -102,7 +102,7 @@ export const SOAPNoteDialog: React.FC<SOAPNoteDialogProps> = ({
 
         <Tabs
           value={currentTab}
-          onChange={(e, newValue) => onTabChange(newValue)}
+          onChange={(_, newValue) => onTabChange(newValue)}
           sx={{ mb: 3 }}
         >
           {tabContent.map((tab) => (

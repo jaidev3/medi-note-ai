@@ -22,3 +22,5 @@ export const Loading: React.FC<LoadingProps> = ({ message = "Loading..." }) => {
     </Box>
   );
 };
+
+export default Loading;
