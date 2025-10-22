@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Container, Box, Typography, Alert } from "@mui/material";
 import { useGenerateSOAPNote, useUpdateSOAPNote } from "@/hooks/useSoapApi";
-import { useListSessions } from "@/hooks/useSessionsApi";
+import { useListPatients, useGetPatientVisits } from "@/hooks/usePatientsApi";
 import {
   useSessionDocuments,
   useDocumentContent,
@@ -40,12 +40,8 @@ const formatFileSize = (sizeInBytes: number) => {
 
 export const SOAPGeneratePage: React.FC = () => {
   const [transcript, setTranscript] = useState("");
+  const [patientId, setPatientId] = useState("");
   const [sessionId, setSessionId] = useState("");
-  const [includeContext, setIncludeContext] = useState(true);
-  const [enablePiiMasking, setEnablePiiMasking] = useState(true);
-  const [preserveMedicalContext, setPreserveMedicalContext] = useState(true);
-  const [temperature, setTemperature] = useState(0.1);
-  const [maxLength, setMaxLength] = useState(8000);
   const [generationResult, setGenerationResult] =
     useState<SOAPGenerationResponse | null>(null);
   const [editedNote, setEditedNote] = useState<SOAPNote | null>(null);
@@ -63,19 +59,27 @@ export const SOAPGeneratePage: React.FC = () => {
   );
 
   const {
+    data: patientsData,
+    isLoading: patientsLoading,
+    error: patientsError,
+  } = useListPatients(1, 100);
+  const {
     data: sessionsData,
     isLoading: sessionsLoading,
     error: sessionsError,
-  } = useListSessions(1, 100);
+  } = useGetPatientVisits(patientId, 1, 100);
   const generateMutation = useGenerateSOAPNote();
   const updateMutation = useUpdateSOAPNote();
   const sessionDocumentsQuery = useSessionDocuments(sessionId, 1, 50);
   const documentContentMutation = useDocumentContent();
 
+  const patients = patientsData?.patients || [];
   const sessions = sessionsData?.sessions || [];
   const sessionDocuments = sessionDocumentsQuery.data?.documents || [];
   const sessionDocumentsLoading =
     sessionDocumentsQuery.isLoading || sessionDocumentsQuery.isFetching;
+  const patientsErrorMessage =
+    patientsError instanceof Error ? patientsError.message : null;
   const sessionsErrorMessage =
     sessionsError instanceof Error ? sessionsError.message : null;
   const generationErrorMessage =
@@ -88,6 +92,18 @@ export const SOAPGeneratePage: React.FC = () => {
     sessionDocumentsQuery.error instanceof Error
       ? sessionDocumentsQuery.error.message
       : null;
+
+  useEffect(() => {
+    setSessionId("");
+    setSelectedDocumentId(null);
+    setGenerationResult(null);
+    setEditedNote(null);
+    setTranscript("");
+    setFormError(null);
+    setSaveError(null);
+    setSuccessMessage(null);
+    setDocumentInfoMessage(null);
+  }, [patientId]);
 
   useEffect(() => {
     setSelectedDocumentId(null);
@@ -131,19 +147,16 @@ export const SOAPGeneratePage: React.FC = () => {
     setSuccessMessage(null);
     setDocumentInfoMessage(null);
 
-    const payloadMaxLength = maxLength > 0 ? maxLength : 8000;
-    const payloadTemperature = temperature >= 0 ? temperature : 0.1;
-
     try {
       const result = await generateMutation.mutateAsync({
         text: cleanedText,
         session_id: sessionId,
         document_id: documentId ?? null,
-        include_context: includeContext,
-        max_length: payloadMaxLength,
-        temperature: payloadTemperature,
-        enable_pii_masking: enablePiiMasking,
-        preserve_medical_context: preserveMedicalContext,
+        include_context: true,
+        max_length: 8000,
+        temperature: 0.1,
+        enable_pii_masking: true,
+        preserve_medical_context: true,
       });
 
       setGenerationResult(result);
@@ -250,8 +263,11 @@ export const SOAPGeneratePage: React.FC = () => {
           <Typography variant="h4" component="h1" fontWeight={800} gutterBottom>
             Generate SOAP Notes
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Create AI-powered SOAP notes from patient transcripts.
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            Create AI-powered SOAP notes by selecting a patient, choosing their session, and providing patient conversation transcripts.
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Simply select a patient and their session, then either type or load a transcript to generate comprehensive SOAP notes automatically.
           </Typography>
         </Box>
 
@@ -276,6 +292,12 @@ export const SOAPGeneratePage: React.FC = () => {
         {documentInfoMessage && (
           <Alert severity="info" sx={{ mb: 2 }}>
             {documentInfoMessage}
+          </Alert>
+        )}
+
+        {patientsErrorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Failed to load patients: {patientsErrorMessage}
           </Alert>
         )}
 
@@ -304,20 +326,14 @@ export const SOAPGeneratePage: React.FC = () => {
         )}
 
         <SOAPConfigurationForm
+          patientId={patientId}
           sessionId={sessionId}
-          temperature={temperature}
-          maxLength={maxLength}
-          includeContext={includeContext}
-          enablePiiMasking={enablePiiMasking}
-          preserveMedicalContext={preserveMedicalContext}
+          patients={patients}
           sessions={sessions}
+          patientsLoading={patientsLoading}
           sessionsLoading={sessionsLoading}
+          onPatientChange={setPatientId}
           onSessionChange={setSessionId}
-          onTemperatureChange={setTemperature}
-          onMaxLengthChange={setMaxLength}
-          onIncludeContextChange={setIncludeContext}
-          onEnablePiiMaskingChange={setEnablePiiMasking}
-          onPreserveMedicalContextChange={setPreserveMedicalContext}
         />
 
         {sessionId && (

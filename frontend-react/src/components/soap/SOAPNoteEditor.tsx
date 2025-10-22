@@ -8,7 +8,9 @@ import {
   Alert,
   Button,
   Divider,
+  CircularProgress,
 } from "@mui/material";
+import { Save, CheckCircle, Error, Info } from "@mui/icons-material";
 import { SOAPSectionEditor } from "./SOAPSectionEditor";
 
 interface SOAPSection {
@@ -66,35 +68,50 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
   onSave,
 }) => {
   return (
-    <Paper sx={{ p: 3, flex: 1 }}>
-      <Typography variant="h6" gutterBottom>
-        Generated SOAP Note
-      </Typography>
+    <Paper
+      sx={{
+        p: 3,
+        flex: 1,
+        borderRadius: 3,
+        border: "1px solid #e8ebf8",
+        boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+      }}
+    >
+      <Box display="flex" alignItems="center" mb={2}>
+        <CheckCircle color="primary" sx={{ mr: 1 }} />
+        <Typography variant="h6" fontWeight={600}>
+          Generated SOAP Note
+        </Typography>
+      </Box>
 
       {generationResult && (
         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
           <Chip
-            label={`Processing: ${generationResult.processing_time.toFixed(
-              2
-            )}s`}
+            icon={<CircularProgress size={14} />}
+            label={`Processing: ${generationResult.processing_time.toFixed(2)}s`}
             color="primary"
             size="small"
+            variant="outlined"
           />
           <Chip
-            label={
-              generationResult.ai_approved ? "AI approved" : "Needs review"
-            }
+            icon={generationResult.ai_approved ? <CheckCircle /> : <Error />}
+            label={generationResult.ai_approved ? "AI approved" : "Needs review"}
             color={generationResult.ai_approved ? "success" : "warning"}
             size="small"
+            variant="outlined"
           />
           <Chip
             label={`Regenerations: ${generationResult.regeneration_count}`}
             size="small"
+            variant="outlined"
           />
           {typeof generationResult.pii_entities_found === "number" && (
             <Chip
+              icon={<Info />}
               label={`PII entities masked: ${generationResult.pii_entities_found}`}
               size="small"
+              variant="outlined"
+              color="info"
             />
           )}
         </Stack>
@@ -133,12 +150,25 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
           )}
 
           <Button
-            variant="outlined"
+            variant="contained"
+            size="large"
             fullWidth
+            startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <Save />}
             onClick={onSave}
             disabled={isSaving}
+            sx={{
+              borderRadius: 2,
+              py: 1.5,
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '1rem',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+              '&:hover': {
+                boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
+              },
+            }}
           >
-            {isSaving ? "Saving..." : "Save SOAP Note"}
+            {isSaving ? "Saving SOAP Note..." : "Save SOAP Note"}
           </Button>
 
           {!generationResult.note_id && (
@@ -153,9 +183,13 @@ export const SOAPNoteEditor: React.FC<SOAPNoteEditorProps> = ({
           {generationResult.message || "SOAP note could not be generated."}
         </Alert>
       ) : (
-        <Box sx={{ py: 10, textAlign: "center" }}>
-          <Typography color="text.secondary">
-            Generated SOAP note will appear here once available.
+        <Box sx={{ py: 12, textAlign: "center" }}>
+          <CheckCircle sx={{ fontSize: 64, color: "text.disabled", mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" fontWeight={500} gutterBottom>
+            Ready for SOAP Note Generation
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Select a professional and session, then enter a transcript to generate your SOAP note.
           </Typography>
         </Box>
       )}

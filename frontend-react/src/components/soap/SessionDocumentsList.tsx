@@ -6,7 +6,9 @@ import {
   Typography,
   Button,
   CircularProgress,
+  Chip,
 } from "@mui/material";
+import { FolderOpen, Clear } from "@mui/icons-material";
 import { DocumentListItem } from "./DocumentListItem";
 
 interface DocumentMetadata {
@@ -37,7 +39,15 @@ export const SessionDocumentsList: React.FC<SessionDocumentsListProps> = ({
   formatFileSize,
 }) => {
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
+    <Paper
+      sx={{
+        p: 3,
+        mb: 3,
+        borderRadius: 3,
+        border: "1px solid #e8ebf8",
+        boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+      }}
+    >
       <Stack
         direction={{ xs: "column", md: "row" }}
         spacing={2}
@@ -46,17 +56,33 @@ export const SessionDocumentsList: React.FC<SessionDocumentsListProps> = ({
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography variant="h6">Session Documents</Typography>
+          <Box display="flex" alignItems="center" mb={1}>
+            <FolderOpen color="primary" sx={{ mr: 1 }} />
+            <Typography variant="h6" fontWeight={600}>
+              Session Documents
+            </Typography>
+            {documents.length > 0 && (
+              <Chip
+                label={`${documents.length} documents`}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ ml: 2 }}
+              />
+            )}
+          </Box>
           <Typography variant="body2" color="text.secondary">
-            Load extracted text from an uploaded document to draft a SOAP note.
+            Load extracted text from uploaded documents to generate SOAP notes.
           </Typography>
         </Box>
         <Button
           variant="outlined"
+          startIcon={<Clear />}
           onClick={onClearSelection}
           disabled={!selectedDocumentId}
+          sx={{ borderRadius: 2 }}
         >
-          Clear document selection
+          Clear Selection
         </Button>
       </Stack>
 
@@ -68,9 +94,15 @@ export const SessionDocumentsList: React.FC<SessionDocumentsListProps> = ({
       )}
 
       {!isLoading && documents.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          No documents found for this session yet.
-        </Typography>
+        <Box sx={{ py: 6, textAlign: "center" }}>
+          <FolderOpen sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" fontWeight={500} gutterBottom>
+            No Documents Available
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Upload and process documents for this session to generate SOAP notes from them.
+          </Typography>
+        </Box>
       )}
 
       {!isLoading && documents.length > 0 && (

@@ -6,10 +6,16 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
-  FormControlLabel,
-  Switch,
 } from "@mui/material";
+
+interface Patient {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  address?: string;
+}
 
 interface Session {
   session_id: string;
@@ -17,37 +23,25 @@ interface Session {
 }
 
 interface SOAPConfigurationFormProps {
+  patientId: string;
   sessionId: string;
-  temperature: number;
-  maxLength: number;
-  includeContext: boolean;
-  enablePiiMasking: boolean;
-  preserveMedicalContext: boolean;
+  patients: Patient[];
   sessions: Session[];
+  patientsLoading: boolean;
   sessionsLoading: boolean;
+  onPatientChange: (patientId: string) => void;
   onSessionChange: (sessionId: string) => void;
-  onTemperatureChange: (value: number) => void;
-  onMaxLengthChange: (value: number) => void;
-  onIncludeContextChange: (checked: boolean) => void;
-  onEnablePiiMaskingChange: (checked: boolean) => void;
-  onPreserveMedicalContextChange: (checked: boolean) => void;
 }
 
 export const SOAPConfigurationForm: React.FC<SOAPConfigurationFormProps> = ({
+  patientId,
   sessionId,
-  temperature,
-  maxLength,
-  includeContext,
-  enablePiiMasking,
-  preserveMedicalContext,
+  patients,
   sessions,
+  patientsLoading,
   sessionsLoading,
+  onPatientChange,
   onSessionChange,
-  onTemperatureChange,
-  onMaxLengthChange,
-  onIncludeContextChange,
-  onEnablePiiMaskingChange,
-  onPreserveMedicalContextChange,
 }) => {
   return (
     <Paper
@@ -59,72 +53,43 @@ export const SOAPConfigurationForm: React.FC<SOAPConfigurationFormProps> = ({
         boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
       }}
     >
-      <Stack spacing={2} direction={{ xs: "column", md: "row" }} sx={{ mb: 2 }}>
-        <FormControl fullWidth disabled={sessionsLoading}>
-          <InputLabel>Session</InputLabel>
-          <Select
-            value={sessionId}
-            onChange={(e) => onSessionChange(e.target.value as string)}
-            label="Session"
-          >
-            <MenuItem value="">Select session</MenuItem>
-            {sessions.map((session) => (
-              <MenuItem key={session.session_id} value={session.session_id}>
-                Session {session.session_id.slice(0, 8)} -{" "}
-                {new Date(session.visit_date).toLocaleDateString()}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Stack spacing={3}>
+        <Stack spacing={2} direction={{ xs: "column", md: "row" }}>
+          <FormControl fullWidth disabled={patientsLoading}>
+            <InputLabel>Select Patient</InputLabel>
+            <Select
+              value={patientId}
+              onChange={(e) => onPatientChange(e.target.value as string)}
+              label="Select Patient"
+            >
+              <MenuItem value="">Select patient</MenuItem>
+              {patients.map((patient) => (
+                <MenuItem key={patient.id} value={patient.id}>
+                  {patient.name}
+                  {patient.email && ` - ${patient.email}`}
+                  {patient.date_of_birth && ` (DOB: ${new Date(patient.date_of_birth).toLocaleDateString()})`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <TextField
-          type="number"
-          label="Temperature"
-          value={temperature}
-          onChange={(e) => onTemperatureChange(Number(e.target.value) || 0)}
-          inputProps={{ min: 0, max: 2, step: 0.05 }}
-          fullWidth
-        />
-
-        <TextField
-          type="number"
-          label="Max Length"
-          value={maxLength}
-          onChange={(e) => onMaxLengthChange(Number(e.target.value) || 0)}
-          inputProps={{ min: 500, step: 100 }}
-          fullWidth
-        />
-      </Stack>
-
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={includeContext}
-              onChange={(e) => onIncludeContextChange(e.target.checked)}
-            />
-          }
-          label="Include medical context"
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={enablePiiMasking}
-              onChange={(e) => onEnablePiiMaskingChange(e.target.checked)}
-            />
-          }
-          label="Enable PII masking"
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={preserveMedicalContext}
-              onChange={(e) => onPreserveMedicalContextChange(e.target.checked)}
-              disabled={!enablePiiMasking}
-            />
-          }
-          label="Preserve medical terminology"
-        />
+          <FormControl fullWidth disabled={sessionsLoading || !patientId}>
+            <InputLabel>Select Session</InputLabel>
+            <Select
+              value={sessionId}
+              onChange={(e) => onSessionChange(e.target.value as string)}
+              label="Select Session"
+            >
+              <MenuItem value="">Select session</MenuItem>
+              {sessions.map((session) => (
+                <MenuItem key={session.session_id} value={session.session_id}>
+                  Session {session.session_id.slice(0, 8)} -{" "}
+                  {new Date(session.visit_date).toLocaleDateString()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Stack>
       </Stack>
     </Paper>
   );
