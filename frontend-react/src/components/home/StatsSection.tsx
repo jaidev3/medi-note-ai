@@ -1,8 +1,10 @@
 import React from "react";
-import { Container, Box, Typography, Grid, Stack } from "@mui/material";
+import { Container, Box, Typography, Grid, Stack, useTheme } from "@mui/material";
 import { Bolt, AutoAwesome, AccessTime } from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
 
 export const StatsSection: React.FC = () => {
+  const theme = useTheme();
   const stats = [
     {
       value: "12x",
@@ -25,7 +27,7 @@ export const StatsSection: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ backgroundColor: "#f8f9ff", pb: { xs: 8, md: 10 } }}>
+    <Box sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.02), pb: { xs: 8, md: 10 } }}>
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           {stats.map((item, index) => (
@@ -36,8 +38,8 @@ export const StatsSection: React.FC = () => {
                   borderRadius: 4,
                   p: 3.5,
                   textAlign: "left",
-                  border: "1px solid #e0e7ff",
-                  boxShadow: "0 18px 32px rgba(148, 163, 184, 0.18)",
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                  boxShadow: `0 18px 32px ${alpha(theme.palette.primary.main, 0.08)}`,
                 }}
               >
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -46,7 +48,7 @@ export const StatsSection: React.FC = () => {
                     <Typography variant="h5" fontWeight={700} color="primary">
                       {item.value}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: "#4b5563" }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                       {item.label}
                     </Typography>
                   </Box>
@@ -56,7 +58,7 @@ export const StatsSection: React.FC = () => {
                   sx={{
                     display: "block",
                     mt: 2,
-                    color: "#6b7280",
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   {item.description}

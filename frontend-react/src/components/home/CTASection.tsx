@@ -1,5 +1,6 @@
 import React from "react";
-import { Container, Box, Button, Typography, Stack } from "@mui/material";
+import { Container, Box, Button, Typography, Stack, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 interface CTASectionProps {
   onSignupClick: () => void;
@@ -10,13 +11,14 @@ export const CTASection: React.FC<CTASectionProps> = ({
   onSignupClick,
   onLoginClick,
 }) => {
+  const theme = useTheme();
   return (
     <Box
       sx={{
         py: { xs: 10, md: 14 },
         position: "relative",
         overflow: "hidden",
-        backgroundColor: "#eef2ff",
+        backgroundColor: alpha(theme.palette.primary.main, 0.05),
       }}
     >
       <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
@@ -33,7 +35,7 @@ export const CTASection: React.FC<CTASectionProps> = ({
           <Typography
             variant="h6"
             sx={{
-              color: "#4b5563",
+              color: theme.palette.text.secondary,
               fontWeight: 400,
               mb: 4,
               lineHeight: 1.6,
@@ -51,13 +53,14 @@ export const CTASection: React.FC<CTASectionProps> = ({
               size="large"
               onClick={onSignupClick}
               sx={{
-                bgcolor: "#4f46e5",
-                color: "white",
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                color: theme.palette.primary.contrastText,
                 fontWeight: 700,
                 px: 4,
                 py: 1.5,
+                boxShadow: theme.shadows[2],
                 "&:hover": {
-                  backgroundColor: "#4338ca",
+                  boxShadow: theme.shadows[4],
                   transform: "translateY(-2px)",
                 },
                 transition: "all 0.3s ease",
@@ -70,14 +73,15 @@ export const CTASection: React.FC<CTASectionProps> = ({
               size="large"
               onClick={onLoginClick}
               sx={{
-                borderColor: "#4338ca",
-                color: "#4338ca",
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
                 fontWeight: 700,
+                borderWidth: 2,
                 px: 4,
                 py: 1.5,
                 "&:hover": {
-                  borderColor: "#312e81",
-                  backgroundColor: "rgba(79,70,229,0.08)",
+                  borderColor: theme.palette.primary.dark,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
                   transform: "translateY(-2px)",
                 },
                 transition: "all 0.3s ease",

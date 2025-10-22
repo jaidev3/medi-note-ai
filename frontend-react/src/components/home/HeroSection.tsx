@@ -8,7 +8,9 @@ import {
   Stack,
   Chip,
   Divider,
+  useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 interface HeroSectionProps {
   onSignupClick: () => void;
@@ -19,13 +21,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onSignupClick,
   onLoginClick,
 }) => {
+  const theme = useTheme();
   return (
     <Box
       sx={{
         py: { xs: 12, md: 16 },
         position: "relative",
         overflow: "hidden",
-        backgroundColor: "#f8f9ff",
+        backgroundColor: theme.palette.grey[50],
       }}
     >
       <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
@@ -37,8 +40,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 sx={{
                   alignSelf: "flex-start",
                   fontWeight: 600,
-                  backgroundColor: "#e0e7ff",
-                  color: "#4338ca",
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.dark,
                   border: "none",
                 }}
               />
@@ -46,13 +49,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 variant="h2"
                 component="h1"
                 fontWeight={800}
-                sx={{ color: "#1f2937", lineHeight: 1.2 }}
+                sx={{ color: theme.palette.text.primary, lineHeight: 1.2 }}
               >
                 AI-Powered SOAP Notes for Hearing Care
               </Typography>
               <Typography
                 variant="h6"
-                sx={{ color: "#4b5563", fontWeight: 400, lineHeight: 1.6 }}
+                sx={{ color: theme.palette.text.secondary, fontWeight: 400, lineHeight: 1.6 }}
               >
                 Automate documentation, stay HIPAA compliant, and give every
                 patient more time with intelligent assistance tuned for hearing
@@ -66,11 +69,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   sx={{
                     px: 4,
                     py: 1.5,
-                    backgroundColor: "#4f46e5",
-                    color: "white",
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    color: theme.palette.primary.contrastText,
                     fontWeight: 700,
+                    boxShadow: theme.shadows[2],
                     "&:hover": {
-                      backgroundColor: "#4338ca",
+                      boxShadow: theme.shadows[4],
                       transform: "translateY(-2px)",
                     },
                     transition: "all 0.3s ease",
@@ -85,12 +89,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   sx={{
                     px: 4,
                     py: 1.5,
-                    borderColor: "#4338ca",
-                    color: "#4338ca",
+                    borderColor: theme.palette.primary.main,
+                    color: theme.palette.primary.main,
                     fontWeight: 700,
+                    borderWidth: 2,
                     "&:hover": {
-                      borderColor: "#312e81",
-                      backgroundColor: "rgba(79,70,229,0.08)",
+                      borderColor: theme.palette.primary.dark,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.08),
                       transform: "translateY(-2px)",
                     },
                     transition: "all 0.3s ease",
@@ -114,8 +119,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     label={badge}
                     sx={{
                       bgcolor: "white",
-                      color: "#4338ca",
-                      border: "1px solid #c7d2fe",
+                      color: theme.palette.primary.dark,
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                       fontWeight: 600,
                     }}
                   />

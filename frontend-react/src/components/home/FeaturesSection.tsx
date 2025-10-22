@@ -6,7 +6,9 @@ import {
   Card,
   CardContent,
   Grid,
+  useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Description,
   Search,
@@ -17,40 +19,41 @@ import {
 } from "@mui/icons-material";
 
 export const FeaturesSection: React.FC = () => {
+  const theme = useTheme();
   const features = [
     {
-      icon: <Description className="text-blue-600" fontSize="large" />,
+      icon: <Description sx={{ color: theme.palette.primary.main }} fontSize="large" />,
       title: "AI-Powered SOAP Notes",
       description:
         "Automatically generate comprehensive SOAP notes from patient conversations with industry-specific terminology recognition.",
     },
     {
-      icon: <Search className="text-green-600" fontSize="large" />,
+      icon: <Search sx={{ color: theme.palette.success.main }} fontSize="large" />,
       title: "Smart Querying",
       description:
         "Ask natural language questions about patient records and get instant, accurate answers from your documentation.",
     },
     {
-      icon: <Security className="text-purple-600" fontSize="large" />,
+      icon: <Security sx={{ color: theme.palette.secondary.main }} fontSize="large" />,
       title: "HIPAA Compliant",
       description:
         "Built with enterprise-grade security and full HIPAA compliance to protect sensitive patient information.",
     },
     {
-      icon: <Speed className="text-orange-600" fontSize="large" />,
+      icon: <Speed sx={{ color: theme.palette.warning.main }} fontSize="large" />,
       title: "Real-time Processing",
       description:
         "Process conversation transcripts in real-time and generate SOAP notes with minimal delay.",
     },
     {
-      icon: <TrendingUp className="text-red-600" fontSize="large" />,
+      icon: <TrendingUp sx={{ color: theme.palette.error.main }} fontSize="large" />,
       title: "Analytics & Insights",
       description:
         "Track documentation efficiency and gain insights into patient care patterns over time.",
     },
     {
       icon: (
-        <IntegrationInstructions className="text-indigo-600" fontSize="large" />
+        <IntegrationInstructions sx={{ color: theme.palette.info.main }} fontSize="large" />
       ),
       title: "EHR Integration",
       description:
@@ -85,13 +88,14 @@ export const FeaturesSection: React.FC = () => {
                 height: "100%",
                 borderRadius: 3,
                 p: 4,
-                bgcolor: "#f8f9ff",
-                border: "1px solid #e0e7ff",
+                bgcolor: alpha(theme.palette.primary.main, 0.02),
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                 transition: "all 0.3s ease",
                 "&:hover": {
                   transform: "translateY(-6px)",
-                  boxShadow: "0 16px 32px rgba(102, 126, 234, 0.18)",
-                  borderColor: "#818cf8",
+                  boxShadow: `0 16px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  borderColor: alpha(theme.palette.primary.main, 0.3),
+                  bgcolor: alpha(theme.palette.primary.main, 0.04),
                 },
               }}
             >
@@ -102,7 +106,7 @@ export const FeaturesSection: React.FC = () => {
                     display: "inline-flex",
                     p: 2,
                     borderRadius: 2,
-                    backgroundColor: "rgba(102, 126, 234, 0.1)",
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
                   }}
                 >
                   {feature.icon}

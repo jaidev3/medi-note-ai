@@ -21,8 +21,6 @@ import {
   Settings,
   Logout,
   Notifications,
-  Login,
-  AppRegistration,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -261,25 +259,108 @@ const ResponsiveNavbar: React.FC<ResponsiveNavbarProps> = ({
             </>
           ) : (
             /* Authentication buttons for non-authenticated users */
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 0.5, sm: 1.5 },
+                ml: { xs: 0.5, sm: 0 }
+              }}
+            >
+              {/* Login button - outline style with hover effects */}
               <Button
                 onClick={openLoginModal}
-                color="primary"
-                startIcon={<Login />}
+                variant="outlined"
                 size={isMobile ? "small" : "medium"}
-                sx={{ fontWeight: 600 }}
+                sx={{
+                  fontWeight: 600,
+                  minWidth: { xs: 60, sm: 85 },
+                  px: { xs: 1.5, sm: 2.5 },
+                  py: { xs: 0.5, sm: 0.75 },
+                  borderRadius: { xs: 1, sm: 2 },
+                  border: `2px solid ${theme.palette.primary.main}`,
+                  color: theme.palette.primary.main,
+                  backgroundColor: "transparent",
+                  transition: "all 0.3s ease-in-out",
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  "&:hover": {
+                    backgroundColor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    transform: { xs: "none", sm: "translateY(-2px)" },
+                    boxShadow: theme.shadows[4],
+                    border: `2px solid ${theme.palette.primary.main}`,
+                  },
+                  "&:active": {
+                    transform: { xs: "none", sm: "translateY(0)" },
+                  },
+                }}
               >
-                {isMobile ? "" : "Log in"}
+                {isMobile ? "Login" : "Log in"}
               </Button>
+
+              {/* Signup button - gradient background with modern effects */}
               <Button
                 onClick={openSignupModal}
                 variant="contained"
-                startIcon={<AppRegistration />}
                 size={isMobile ? "small" : "medium"}
-                sx={{ fontWeight: 600 }}
+                sx={{
+                  fontWeight: 700,
+                  minWidth: { xs: 65, sm: 90 },
+                  px: { xs: 1.5, sm: 2.5 },
+                  py: { xs: 0.5, sm: 0.75 },
+                  borderRadius: { xs: 1, sm: 2 },
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  color: theme.palette.primary.contrastText,
+                  transition: "all 0.3s ease-in-out",
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  boxShadow: theme.shadows[2],
+                  position: "relative",
+                  overflow: "hidden",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+                    opacity: 0,
+                    transition: "opacity 0.3s ease-in-out",
+                  },
+                  "&:hover": {
+                    transform: { xs: "none", sm: "translateY(-2px)" },
+                    boxShadow: theme.shadows[6],
+                    "&::before": {
+                      opacity: 1,
+                    },
+                  },
+                  "&:active": {
+                    transform: { xs: "none", sm: "translateY(0)" },
+                  },
+                }}
               >
-                {isMobile ? "" : "Sign up"}
+                {isMobile ? "Signup" : "Sign up"}
               </Button>
+
+              {/* Add subtle glow effect on desktop */}
+              {!isMobile && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: "-50%",
+                    right: "10%",
+                    width: 150,
+                    height: 150,
+                    background: `radial-gradient(circle, ${theme.palette.primary.light}20 0%, transparent 70%)`,
+                    pointerEvents: "none",
+                    animation: "pulse 3s ease-in-out infinite",
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 0.5, transform: "scale(1)" },
+                      "50%": { opacity: 0.8, transform: "scale(1.1)" },
+                    },
+                  }}
+                />
+              )}
             </Box>
           )}
         </Box>

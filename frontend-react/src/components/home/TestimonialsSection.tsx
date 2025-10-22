@@ -8,9 +8,12 @@ import {
   Stack,
   Avatar,
   Divider,
+  useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 export const TestimonialsSection: React.FC = () => {
+  const theme = useTheme();
   const testimonials = [
     {
       name: "Dr. Aisha Reynolds",
@@ -27,7 +30,7 @@ export const TestimonialsSection: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ bgcolor: "#f8f9ff", py: { xs: 10, md: 14 } }}>
+    <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.02), py: { xs: 10, md: 14 } }}>
       <Container maxWidth="lg">
         <Box textAlign="center" mb={8}>
           <Typography variant="h3" component="h2" fontWeight={800} gutterBottom>
@@ -54,13 +57,14 @@ export const TestimonialsSection: React.FC = () => {
                   borderRadius: 3,
                   p: 4,
                   bgcolor: "white",
-                  border: "1px solid #e8ebf8",
-                  boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+                  boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.06)}`,
                   height: "100%",
                   transition: "all 0.3s ease",
                   "&:hover": {
-                    boxShadow: "0 12px 40px rgba(102, 126, 234, 0.15)",
+                    boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.12)}`,
                     transform: "translateY(-4px)",
+                    borderColor: alpha(theme.palette.primary.main, 0.15),
                   },
                 }}
               >
@@ -81,7 +85,7 @@ export const TestimonialsSection: React.FC = () => {
                         color: "white",
                         width: 48,
                         height: 48,
-                        backgroundColor: "#4f46e5",
+                        backgroundColor: theme.palette.primary.main,
                       }}
                     >
                       {testimonial.name
