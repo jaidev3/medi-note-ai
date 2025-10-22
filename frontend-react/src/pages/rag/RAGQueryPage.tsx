@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container } from "@mui/material";
+import { Container, Box } from "@mui/material";
 import { useQueryKnowledgeBase } from "@/hooks/useRagApi";
 import { useListPatients } from "@/hooks/usePatientsApi";
 import { useListSessions } from "@/hooks/useSessionsApi";
@@ -131,10 +131,23 @@ export const RAGQueryPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col">
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #ddd6fe 75%, #f3e8ff 100%)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <Container
-        maxWidth="md"
-        sx={{ display: "flex", flexDirection: "column", flex: 1, py: 3 }}
+        maxWidth="lg"
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          py: 3,
+          px: { xs: 2, sm: 3 },
+        }}
       >
         <RAGHeader
           patientId={patientId}
@@ -148,7 +161,11 @@ export const RAGQueryPage: React.FC = () => {
           onDownloadTranscript={handleDownloadTranscript}
         />
 
-        <ChatMessagesArea messages={messages} patientId={patientId} />
+        <ChatMessagesArea
+          messages={messages}
+          patientId={patientId}
+          isLoading={queryMutation.isPending}
+        />
 
         <ChatInputArea
           inputMessage={inputMessage}
@@ -159,6 +176,6 @@ export const RAGQueryPage: React.FC = () => {
           onSendMessage={handleSendMessage}
         />
       </Container>
-    </div>
+    </Box>
   );
 };
