@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography, Button, Stack, Chip, Grid } from "@mui/material";
+import { Card, CardContent, Typography, Button, Stack, Chip, Grid, Box } from "@mui/material";
 import type { SOAPNoteResponse } from "@/lib";
 
 interface SOAPNoteCardProps {
@@ -27,14 +27,8 @@ export const SOAPNoteCard: React.FC<SOAPNoteCardProps> = ({
   const readableCreated = new Date(note.created_at).toLocaleString();
 
   return (
-    <Box
-      sx={{
-        mb: 2,
-        p: 2,
-        border: "1px solid #eee",
-        borderRadius: 1,
-      }}
-    >
+    <Card variant="outlined" sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 2 }}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
@@ -103,24 +97,21 @@ export const SOAPNoteCard: React.FC<SOAPNoteCardProps> = ({
         </Button>
       </Stack>
 
-      {note.soap_note ? (
-        <Grid container spacing={1} sx={{ mt: 1 }}>
+      {note.soap_note && (
+        <Grid container spacing={2} sx={{ mt: 2 }}>
           {Object.entries(note.soap_note).map(([section, secData]) => (
             <Grid item xs={12} md={6} key={section}>
-              <Typography variant="subtitle2">
+              <Typography variant="subtitle2" fontWeight={600} color="primary">
                 {section.toUpperCase()}
               </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
                 {(secData as { content?: string })?.content ?? JSON.stringify(secData)}
               </Typography>
             </Grid>
           ))}
         </Grid>
-      ) : (
-        <Typography variant="body2" sx={{ mt: 1, whiteSpace: "pre-wrap" }}>
-          {JSON.stringify(note.content, null, 2)}
-        </Typography>
       )}
-    </Box>
+      </CardContent>
+    </Card>
   );
 };

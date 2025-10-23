@@ -17,16 +17,7 @@ export const AdminStatsCard: React.FC<AdminStatsCardProps> = ({
   subtitle,
 }) => {
   return (
-    <Card
-      sx={{
-        height: "100%",
-        transition: "transform 0.2s, box-shadow 0.2s",
-        "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: 4,
-        },
-      }}
-    >
+    <Card variant="outlined" sx={{ height: "100%" }}>
       <CardContent>
         <Box
           sx={{
@@ -41,20 +32,20 @@ export const AdminStatsCard: React.FC<AdminStatsCardProps> = ({
           </Typography>
           <Box
             sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              bgcolor: `${color}.lighter`,
+              width: 40,
+              height: 40,
+              borderRadius: 1,
+              bgcolor: `${color}.main`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: `${color}.main`,
+              color: "white",
             }}
           >
             {icon}
           </Box>
         </Box>
-        <Typography variant="h4" component="div" fontWeight="bold" gutterBottom>
+        <Typography variant="h4" component="div" fontWeight={600} gutterBottom>
           {value}
         </Typography>
         {subtitle && (

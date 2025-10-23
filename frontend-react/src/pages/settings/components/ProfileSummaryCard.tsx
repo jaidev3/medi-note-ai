@@ -4,6 +4,7 @@ import {
   Avatar,
   Typography,
   useTheme,
+  Chip,
 } from "@mui/material";
 import { EnhancedCard } from "@/components/ui";
 
@@ -34,13 +35,14 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({
       <Box sx={{ textAlign: "center" }}>
         <Avatar
           sx={{
-            width: 80,
-            height: 80,
+            width: 64,
+            height: 64,
             mx: "auto",
             mb: 2,
-            fontSize: "2rem",
-            fontWeight: 700,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            bgcolor: theme.palette.primary.main,
+            color: "white",
           }}
         >
           {getInitials(userName || userEmail)}
@@ -51,21 +53,13 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({
         <Typography variant="body2" color="text.secondary" gutterBottom>
           {userEmail}
         </Typography>
-        <Box
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            px: 2,
-            py: 1,
-            borderRadius: 2,
-            background: `${theme.palette.primary.main}10`,
-            border: `1px solid ${theme.palette.primary.main}30`,
-          }}
-        >
-          <Typography variant="body2" fontWeight={500}>
-            {userRole}
-          </Typography>
-        </Box>
+        <Chip
+          label={userRole}
+          color="primary"
+          variant="outlined"
+          size="small"
+          sx={{ fontWeight: 500 }}
+        />
       </Box>
     </EnhancedCard>
   );
