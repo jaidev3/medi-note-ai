@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 from pydantic import BaseModel, Field, EmailStr
 
-from app.models.professional import ProfessionalRole
+from app.models.users import ProfessionalRole, UserRole
 
 
 class PatientCreateRequest(BaseModel):

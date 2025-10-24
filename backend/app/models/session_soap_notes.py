@@ -40,7 +40,7 @@ class SessionSoapNotes(Base):
     )
     professional_id = Column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("professional.id", ondelete="SET NULL"),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
     ai_approved = Column(Boolean, nullable=False)
@@ -63,7 +63,7 @@ class SessionSoapNotes(Base):
     
     # Relationships
     session = relationship("PatientVisitSessions", back_populates="soap_notes")
-    professional = relationship("Professional", back_populates="soap_notes")
+    professional = relationship("User", foreign_keys=[professional_id])
     document = relationship("UploadedDocuments", back_populates="soap_notes")
     
     __table_args__ = (

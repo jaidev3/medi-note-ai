@@ -84,12 +84,12 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
     handleSort(property);
   };
 
-  const renderMobileCard = (row: any) => {
+  const renderMobileCard = (row: any, index: number) => {
     const mobileColumns = columns.filter(col => col.mobile !== false);
-    
+
     return (
       <Card
-        key={row.id}
+        key={row.id || row.session_id || index}
         sx={{
           mb: 2,
           cursor: onRowClick ? "pointer" : "default",
@@ -174,9 +174,9 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <TableRow
-              key={row.id}
+              key={row.id || row.session_id || index}
               hover
               onClick={() => onRowClick && onRowClick(row)}
               sx={{
@@ -257,7 +257,7 @@ const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         <>
           {isMobile ? (
             <Box>
-              {rows.map((row) => renderMobileCard(row))}
+              {rows.map((row, index) => renderMobileCard(row, index))}
             </Box>
           ) : (
             renderDesktopTable()

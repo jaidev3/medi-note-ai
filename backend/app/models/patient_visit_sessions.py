@@ -21,12 +21,12 @@ class PatientVisitSessions(Base):
     )
     patient_id = Column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("patients.id", ondelete="RESTRICT"),
+        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
     professional_id = Column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("professional.id", ondelete="SET NULL"),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
     visit_date = Column(
@@ -48,8 +48,8 @@ class PatientVisitSessions(Base):
     )
     
     # Relationships
-    patient = relationship("Patients", back_populates="visit_sessions")
-    professional = relationship("Professional", back_populates="visit_sessions")
+    patient = relationship("User", foreign_keys=[patient_id], back_populates="visit_sessions_as_patient")
+    professional = relationship("User", foreign_keys=[professional_id], back_populates="visit_sessions_as_professional")
     uploaded_documents = relationship(
         "UploadedDocuments",
         back_populates="session",

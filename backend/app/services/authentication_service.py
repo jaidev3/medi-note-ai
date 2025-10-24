@@ -12,7 +12,7 @@ import bcrypt
 import jwt
 from sqlalchemy import select
 
-from app.models.professional import Professional
+from app.models.users import User
 from app.schemas.auth_schemas import (
     Token, TokenData, LoginRequest, LoginResponse, 
     UserRegistrationRequest, UserProfileResponse
@@ -117,7 +117,7 @@ class AuthenticationService:
             logger.error("Token verification failed", error=str(e))
             return None
     
-    async def authenticate_user(self, email: str, password: str) -> Optional[Professional]:
+    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
         """
         Authenticate user with email and password.
         
@@ -126,13 +126,13 @@ class AuthenticationService:
             password: User password
             
         Returns:
-            Professional: Authenticated user or None
+            User: Authenticated user or None
         """
         async with async_session_maker() as session:
             try:
                 # Find user by email (case-insensitive)
-                stmt = select(Professional).where(
-                    Professional.email.ilike(email.lower())
+                stmt = select(User).where(
+                    User.email.ilike(email.lower())
                 )
                 result = await session.execute(stmt)
                 user = result.scalar_one_or_none()
@@ -259,7 +259,7 @@ class AuthenticationService:
             logger.error("Token refresh failed", error=str(e))
             return None
     
-    async def get_current_user(self, token: str) -> Optional[Professional]:
+    async def get_current_user(self, token: str) -> Optional[User]:
         """
         Get current user from access token.
         
@@ -267,7 +267,7 @@ class AuthenticationService:
             token: JWT access token
             
         Returns:
-            Professional: Current user or None if invalid
+            User: Current user or None if invalid
         """
         try:
             # Verify access token
@@ -281,7 +281,7 @@ class AuthenticationService:
             
             # Get user from database
             async with async_session_maker() as session:
-                stmt = select(Professional).where(Professional.id == uuid.UUID(user_id))
+                stmt = select(User).where(User.id == uuid.UUID(user_id))
                 result = await session.execute(stmt)
                 user = result.scalar_one_or_none()
                 
@@ -291,9 +291,9 @@ class AuthenticationService:
             logger.error("Get current user failed", error=str(e))
             return None
     
-    async def register_professional(self, request: UserRegistrationRequest) -> UserProfileResponse:
+    async def register_User(self, request: UserRegistrationRequest) -> UserProfileResponse:
         """
-        Register new healthcare professional.
+        Register new healthcare User.
         
         Args:
             request: Registration request
@@ -304,8 +304,8 @@ class AuthenticationService:
         async with async_session_maker() as session:
             try:
                 # Check if email already exists
-                stmt = select(Professional).where(
-                    Professional.email.ilike(request.email.lower())
+                stmt = select(User).where(
+                    User.email.ilike(request.email.lower())
                 )
                 result = await session.execute(stmt)
                 existing_user = result.scalar_one_or_none()
@@ -316,8 +316,8 @@ class AuthenticationService:
                 # Hash password
                 hashed_password = self.hash_password(request.password)
                 
-                # Create new professional
-                new_professional = Professional(
+                # Create new User
+                new_User = User(
                     name=request.name,
                     email=request.email.lower(),
                     password_hash=hashed_password,
@@ -327,25 +327,25 @@ class AuthenticationService:
                     phone_number=request.phone_number
                 )
                 
-                session.add(new_professional)
+                session.add(new_User)
                 await session.commit()
-                await session.refresh(new_professional)
+                await session.refresh(new_User)
                 
-                logger.info("Professional registered successfully", user_id=str(new_professional.id), email=request.email)
+                logger.info("User registered successfully", user_id=str(new_User.id), email=request.email)
                 
                 return UserProfileResponse(
-                    id=new_professional.id,
-                    name=new_professional.name,
-                    email=new_professional.email,
-                    role=new_professional.role,
-                    department=new_professional.department,
-                    employee_id=new_professional.employee_id,
-                    phone_number=new_professional.phone_number,
-                    created_at=new_professional.created_at,
-                    updated_at=new_professional.updated_at
+                    id=new_User.id,
+                    name=new_User.name,
+                    email=new_User.email,
+                    role=new_User.role,
+                    department=new_User.department,
+                    employee_id=new_User.employee_id,
+                    phone_number=new_User.phone_number,
+                    created_at=new_User.created_at,
+                    updated_at=new_User.updated_at
                 )
                 
             except Exception as e:
                 await session.rollback()
-                logger.error("Professional registration failed", error=str(e), email=request.email)
+                logger.error("User registration failed", error=str(e), email=request.email)
                 raise

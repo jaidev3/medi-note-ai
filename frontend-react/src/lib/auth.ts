@@ -14,7 +14,8 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  role:
+  role: "PROFESSIONAL" | "PATIENT" | "ADMIN";
+  professional_role?:
     | "AUDIOLOGISTS"
     | "HEARING_AID_SPECIALISTS"
     | "ENT_PHYSICIANS"
@@ -52,8 +53,21 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new ApiError(error.detail || "Login failed", response.status);
+      const error = await response.json().catch(() => ({}));
+      let errorMessage = error.detail || "Login failed";
+
+      // Handle validation errors
+      if (response.status === 422 && error.detail && typeof error.detail === 'object') {
+        if (Array.isArray(error.detail)) {
+          errorMessage = error.detail
+            .map((err: any) => `${err.loc?.join('.')}: ${err.msg}`)
+            .join(', ');
+        } else {
+          errorMessage = JSON.stringify(error.detail);
+        }
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
 
     return response.json();
@@ -70,11 +84,23 @@ export const authApi = {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new ApiError(
-        error.detail || "Registration failed",
-        response.status
-      );
+      const error = await response.json().catch(() => ({}));
+      // Handle different error response formats
+      let errorMessage = error.detail || "Registration failed";
+
+      // If error has validation details (422), try to extract them
+      if (response.status === 422 && error.detail && typeof error.detail === 'object') {
+        // Handle FastAPI validation error format
+        if (Array.isArray(error.detail)) {
+          errorMessage = error.detail
+            .map((err: any) => `${err.loc?.join('.')}: ${err.msg}`)
+            .join(', ');
+        } else {
+          errorMessage = JSON.stringify(error.detail);
+        }
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
 
     return response.json();
@@ -93,11 +119,20 @@ export const authApi = {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new ApiError(
-        error.detail || "Token refresh failed",
-        response.status
-      );
+      const error = await response.json().catch(() => ({}));
+      let errorMessage = error.detail || "Token refresh failed";
+
+      if (response.status === 422 && error.detail && typeof error.detail === 'object') {
+        if (Array.isArray(error.detail)) {
+          errorMessage = error.detail
+            .map((err: any) => `${err.loc?.join('.')}: ${err.msg}`)
+            .join(', ');
+        } else {
+          errorMessage = JSON.stringify(error.detail);
+        }
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
 
     return response.json();
@@ -110,11 +145,20 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new ApiError(
-        error.detail || "Failed to get user info",
-        response.status
-      );
+      const error = await response.json().catch(() => ({}));
+      let errorMessage = error.detail || "Failed to get user info";
+
+      if (response.status === 422 && error.detail && typeof error.detail === 'object') {
+        if (Array.isArray(error.detail)) {
+          errorMessage = error.detail
+            .map((err: any) => `${err.loc?.join('.')}: ${err.msg}`)
+            .join(', ');
+        } else {
+          errorMessage = JSON.stringify(error.detail);
+        }
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
 
     return response.json();
@@ -130,8 +174,20 @@ export const authApi = {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new ApiError(error.detail || "Logout failed", response.status);
+      const error = await response.json().catch(() => ({}));
+      let errorMessage = error.detail || "Logout failed";
+
+      if (response.status === 422 && error.detail && typeof error.detail === 'object') {
+        if (Array.isArray(error.detail)) {
+          errorMessage = error.detail
+            .map((err: any) => `${err.loc?.join('.')}: ${err.msg}`)
+            .join(', ');
+        } else {
+          errorMessage = JSON.stringify(error.detail);
+        }
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
   },
 };

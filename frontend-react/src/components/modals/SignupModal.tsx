@@ -50,7 +50,8 @@ export const SignupModal: React.FC = () => {
       name: "",
       email: "",
       password: "",
-      role: "AUDIOLOGISTS",
+      role: "PROFESSIONAL",
+      professional_role: "AUDIOLOGISTS",
       department: "",
       employee_id: "",
       phone_number: "",
@@ -71,7 +72,28 @@ export const SignupModal: React.FC = () => {
       await registerUser(data);
       handleClose();
     } catch (err: any) {
-      setError(err?.message || "Registration failed. Please try again.");
+      // Handle different error types
+      let errorMessage = "Registration failed. Please try again.";
+
+      if (err?.message) {
+        // If the error message is a string, use it directly
+        if (typeof err.message === 'string') {
+          errorMessage = err.message;
+        }
+        // If it's an object (like validation errors), extract the detail
+        else if (err.message?.detail) {
+          errorMessage = err.message.detail;
+        }
+        // If it's a validation error with multiple fields, try to extract them
+        else if (typeof err.message === 'object') {
+          const validationErrors = Object.entries(err.message)
+            .map(([field, error]) => `${field}: ${error}`)
+            .join(', ');
+          errorMessage = validationErrors || errorMessage;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -243,17 +265,17 @@ export const SignupModal: React.FC = () => {
 
               <Grid item xs={12} sm={6}>
                 <Controller
-                  name="role"
+                  name="professional_role"
                   control={control}
-                  rules={{ required: "Role is required" }}
+                  rules={{ required: "Professional role is required" }}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       fullWidth
                       select
-                      label="Role"
-                      error={!!errors.role}
-                      helperText={errors.role?.message}
+                      label="Professional Role"
+                      error={!!errors.professional_role}
+                      helperText={errors.professional_role?.message}
                       variant="outlined"
                       sx={{
                         "& .MuiOutlinedInput-root": {

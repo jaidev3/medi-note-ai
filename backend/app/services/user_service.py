@@ -16,11 +16,10 @@ from app.schemas.user_schemas import (
     SessionCreateRequest, SessionUpdateRequest, SessionResponse, SessionListResponse,
     UserStatsResponse
 )
-from app.models.patients import Patients
-from app.models.professional import Professional
 from app.models.patient_visit_sessions import PatientVisitSessions
 from app.models.uploaded_documents import UploadedDocuments
 from app.models.session_soap_notes import SessionSoapNotes
+from app.models.users import User, UserRole
 from app.database.db import async_session_maker
 
 logger = structlog.get_logger(__name__)
@@ -45,8 +44,8 @@ class UserService:
                 
                 # Check if email already exists
                 if request.email:
-                    stmt = select(Patients).where(
-                        func.lower(Patients.email) == request.email.lower()
+                    stmt = select(User).where(
+                        func.lower(User.email) == request.email.lower()
                     )
                     result = await session.execute(stmt)
                     existing_patient = result.scalar_one_or_none()
@@ -55,11 +54,12 @@ class UserService:
                         raise ValueError("Patient with this email already exists")
                 
                 # Create new patient
-                patient = Patients(
+                patient = User(
                     name=request.name,
                     email=request.email.lower() if request.email else None,
-                    phone=request.phone,
-                    address=request.address
+                    phone_number=request.phone,
+                    address=request.address,
+                    role=UserRole.PATIENT
                 )
                 
                 session.add(patient)
@@ -72,7 +72,7 @@ class UserService:
                     id=patient.id,
                     name=patient.name,
                     email=patient.email,
-                    phone=patient.phone,
+                    phone=patient.phone_number,
                     address=patient.address,
                     created_at=patient.created_at,
                     updated_at=patient.updated_at,
@@ -97,7 +97,7 @@ class UserService:
         """
         async with async_session_maker() as session:
             try:
-                stmt = select(Patients).where(Patients.id == patient_id)
+                stmt = select(User).where(User.id == patient_id)
                 result = await session.execute(stmt)
                 patient = result.scalar_one_or_none()
                 
@@ -122,7 +122,7 @@ class UserService:
                     id=patient.id,
                     name=patient.name,
                     email=patient.email,
-                    phone=patient.phone,
+                    phone=patient.phone_number,
                     address=patient.address,
                     created_at=patient.created_at,
                     updated_at=patient.updated_at,
@@ -147,7 +147,7 @@ class UserService:
         """
         async with async_session_maker() as session:
             try:
-                stmt = select(Patients).where(Patients.id == patient_id)
+                stmt = select(User).where(User.id == patient_id)
                 result = await session.execute(stmt)
                 patient = result.scalar_one_or_none()
                 
@@ -159,10 +159,10 @@ class UserService:
                     patient.name = request.name
                 if request.email is not None:
                     # Check email uniqueness
-                    email_stmt = select(Patients).where(
+                    email_stmt = select(User).where(
                         and_(
-                            func.lower(Patients.email) == request.email.lower(),
-                            Patients.id != patient_id
+                            func.lower(User.email) == request.email.lower(),
+                            User.id != patient_id
                         )
                     )
                     email_result = await session.execute(email_stmt)
@@ -173,7 +173,7 @@ class UserService:
                     
                     patient.email = request.email.lower()
                 if request.phone is not None:
-                    patient.phone = request.phone
+                    patient.phone_number = request.phone
                 if request.address is not None:
                     patient.address = request.address
                 
@@ -205,18 +205,18 @@ class UserService:
         async with async_session_maker() as session:
             try:
                 # Build base query
-                stmt = select(Patients)
-                
+                stmt = select(User).where(User.role == UserRole.PATIENT)
+
                 # Add search filter
                 if search:
                     search_term = f"%{search.lower()}%"
                     stmt = stmt.where(
                         or_(
-                            func.lower(Patients.name).like(search_term),
-                            func.lower(Patients.email).like(search_term)
+                            func.lower(User.name).like(search_term),
+                            func.lower(User.email).like(search_term)
                         )
                     )
-                
+
                 # Get total count
                 count_stmt = select(func.count()).select_from(stmt.subquery())
                 count_result = await session.execute(count_stmt)
@@ -224,7 +224,7 @@ class UserService:
                 
                 # Add pagination and ordering
                 offset = (page - 1) * page_size
-                stmt = stmt.order_by(Patients.name.asc()).offset(offset).limit(page_size)
+                stmt = stmt.order_by(User.name.asc()).offset(offset).limit(page_size)
                 
                 result = await session.execute(stmt)
                 patients = result.scalars().all()
@@ -243,7 +243,7 @@ class UserService:
                         id=patient.id,
                         name=patient.name,
                         email=patient.email,
-                        phone=patient.phone,
+                        phone=patient.phone_number,
                         address=patient.address,
                         created_at=patient.created_at,
                         updated_at=patient.updated_at,
@@ -287,7 +287,7 @@ class UserService:
                 )
                 
                 # Verify patient exists
-                patient_stmt = select(Patients).where(Patients.id == request.patient_id)
+                patient_stmt = select(User).where(User.id == request.patient_id)
                 patient_result = await session.execute(patient_stmt)
                 patient = patient_result.scalar_one_or_none()
                 
@@ -296,10 +296,10 @@ class UserService:
                 
                 # Verify professional exists if provided
                 if request.professional_id:
-                    prof_stmt = select(Professional).where(Professional.id == request.professional_id)
+                    prof_stmt = select(User).where(User.id == request.professional_id)
                     prof_result = await session.execute(prof_stmt)
                     professional = prof_result.scalar_one_or_none()
-                    
+
                     if not professional:
                         raise ValueError("Professional not found")
                 
@@ -318,7 +318,7 @@ class UserService:
                 logger.info("✅ Session created successfully", session_id=str(visit_session.session_id))
                 
                 # Get patient name for response
-                patient = await session.execute(select(Patients).where(Patients.id == visit_session.patient_id))
+                patient = await session.execute(select(User).where(User.id == visit_session.patient_id))
                 patient_obj = patient.scalar_one_or_none()
                 patient_name = patient_obj.name if patient_obj else None
 
@@ -362,8 +362,8 @@ class UserService:
         async with async_session_maker() as session:
             try:
                 # Build base query with patient join
-                stmt = select(PatientVisitSessions, Patients.name).join(
-                    Patients, PatientVisitSessions.patient_id == Patients.id
+                stmt = select(PatientVisitSessions, User.name).join(
+                    User, PatientVisitSessions.patient_id == User.id
                 )
 
                 # Apply filters
@@ -444,8 +444,8 @@ class UserService:
         """
         async with async_session_maker() as session:
             try:
-                stmt = select(PatientVisitSessions, Patients.name).join(
-                    Patients, PatientVisitSessions.patient_id == Patients.id
+                stmt = select(PatientVisitSessions, User.name).join(
+                    User, PatientVisitSessions.patient_id == User.id
                 ).where(PatientVisitSessions.session_id == session_id)
                 result = await session.execute(stmt)
                 session_data = result.first()
@@ -493,7 +493,7 @@ class UserService:
     ) -> Optional[SessionResponse]:
         """
         Update session information.
-        
+            
         Args:
             session_id: Session UUID
             request: Update request data
@@ -537,7 +537,7 @@ class UserService:
                 soap_count = soap_count_result.scalar() or 0
                 
                 # Get patient name for response
-                patient = await session.execute(select(Patients).where(Patients.id == visit_session.patient_id))
+                patient = await session.execute(select(User).where(User.id == visit_session.patient_id))
                 patient_obj = patient.scalar_one_or_none()
                 patient_name = patient_obj.name if patient_obj else None
 
@@ -604,7 +604,7 @@ class UserService:
         async with async_session_maker() as session:
             try:
                 # Get total counts
-                total_patients_stmt = select(func.count(Patients.id))
+                total_patients_stmt = select(func.count(User.id)).where(User.role == 'PATIENT')
                 total_patients_result = await session.execute(total_patients_stmt)
                 total_patients = total_patients_result.scalar() or 0
                 
@@ -689,7 +689,7 @@ class UserService:
         """
         async with async_session_maker() as session:
             try:
-                stmt = select(Professional).where(Professional.id == professional_id)
+                stmt = select(User).where(User.id == professional_id)
                 result = await session.execute(stmt)
                 professional = result.scalar_one_or_none()
                 
@@ -761,27 +761,27 @@ class UserService:
         async with async_session_maker() as session:
             try:
                 # Build base query
-                stmt = select(Professional)
-                
+                stmt = select(User).where(User.role.in_(['PROFESSIONAL', 'ADMIN']))
+
                 # Add search filter if provided
                 if search:
                     search_term = f"%{search.lower()}%"
                     stmt = stmt.where(
                         or_(
-                            Professional.name.ilike(search_term),
-                            Professional.email.ilike(search_term),
-                            Professional.department.ilike(search_term) if Professional.department else False
+                            User.name.ilike(search_term),
+                            User.email.ilike(search_term),
+                            User.department.ilike(search_term) if User.department else False
                         )
                     )
-                
+
                 # Get total count for pagination
-                count_stmt = select(func.count(Professional.id))
+                count_stmt = select(func.count(User.id)).where(User.role.in_(['PROFESSIONAL', 'ADMIN']))
                 if search:
                     count_stmt = count_stmt.where(
                         or_(
-                            Professional.name.ilike(search_term),
-                            Professional.email.ilike(search_term),
-                            Professional.department.ilike(search_term) if Professional.department else False
+                            User.name.ilike(search_term),
+                            User.email.ilike(search_term),
+                            User.department.ilike(search_term) if User.department else False
                         )
                     )
                 
@@ -790,7 +790,7 @@ class UserService:
                 
                 # Add pagination and ordering
                 offset = (page - 1) * page_size
-                stmt = stmt.offset(offset).limit(page_size).order_by(Professional.created_at.desc())
+                stmt = stmt.offset(offset).limit(page_size).order_by(User.created_at.desc())
                 
                 # Execute query
                 result = await session.execute(stmt)

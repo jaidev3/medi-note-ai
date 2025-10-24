@@ -3,17 +3,15 @@ Authentication Controller
 Handles authentication-related business logic and request orchestration
 """
 import uuid
-from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import structlog
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth_schemas import UserLogin, Token, UserRead, UserCreate
 from app.services.authentication_service import AuthenticationService
-from app.models.professional import Professional
+from app.models.users import User
 from app.database.db import async_session_maker
 
 logger = structlog.get_logger(__name__)
@@ -44,7 +42,7 @@ class AuthController:
             
             async with async_session_maker() as session:
                 # Find user by email
-                stmt = select(Professional).where(Professional.email == login_data.email.lower())
+                stmt = select(User).where(User.email == login_data.email.lower())
                 result = await session.execute(stmt)
                 user = result.scalar_one_or_none()
                 
@@ -122,7 +120,7 @@ class AuthController:
             
             # Verify user still exists
             async with async_session_maker() as session:
-                stmt = select(Professional).where(Professional.id == uuid.UUID(user_id))
+                stmt = select(User).where(User.id == uuid.UUID(user_id))
                 result = await session.execute(stmt)
                 user = result.scalar_one_or_none()
                 
@@ -189,7 +187,7 @@ class AuthController:
             
             # Get user from database
             async with async_session_maker() as session:
-                stmt = select(Professional).where(Professional.id == uuid.UUID(user_id))
+                stmt = select(User).where(User.id == uuid.UUID(user_id))
                 result = await session.execute(stmt)
                 user = result.scalar_one_or_none()
                 
@@ -204,6 +202,7 @@ class AuthController:
                     email=user.email,
                     name=user.name,
                     role=user.role,
+                    professional_role=user.professional_role,
                     department=user.department,
                     employee_id=user.employee_id,
                     phone_number=user.phone_number,
@@ -238,25 +237,49 @@ class AuthController:
             
             async with async_session_maker() as session:
                 # Check if email already exists
-                stmt = select(Professional).where(Professional.email == user_data.email.lower())
-                result = await session.execute(stmt)
-                existing_user = result.scalar_one_or_none()
-                
+                email_stmt = select(User).where(User.email == user_data.email.lower())
+                email_result = await session.execute(email_stmt)
+                existing_user = email_result.scalar_one_or_none()
+
                 if existing_user:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Email already registered"
                     )
+
+                # Check if name already exists
+                name_stmt = select(User).where(User.name == user_data.name)
+                name_result = await session.execute(name_stmt)
+                existing_name = name_result.scalar_one_or_none()
+
+                if existing_name:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Name already registered"
+                    )
+
+                # Check if employee_id already exists (if provided)
+                if user_data.employee_id:
+                    emp_id_stmt = select(User).where(User.employee_id == user_data.employee_id)
+                    emp_id_result = await session.execute(emp_id_stmt)
+                    existing_emp_id = emp_id_result.scalar_one_or_none()
+
+                    if existing_emp_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Employee ID already registered"
+                        )
                 
                 # Hash password
                 password_hash = self.auth_service.hash_password(user_data.password)
                 
                 # Create new user
-                new_user = Professional(
+                new_user = User(
                     name=user_data.name,
                     email=user_data.email.lower(),
                     password_hash=password_hash,
                     role=user_data.role,
+                    professional_role=user_data.professional_role,
                     department=user_data.department,
                     employee_id=user_data.employee_id,
                     phone_number=user_data.phone_number
@@ -273,6 +296,7 @@ class AuthController:
                     email=new_user.email,
                     name=new_user.name,
                     role=new_user.role,
+                    professional_role=new_user.professional_role,
                     department=new_user.department,
                     employee_id=new_user.employee_id,
                     phone_number=new_user.phone_number,
@@ -320,7 +344,7 @@ class AuthController:
             
             return {
                 "message": "Successfully logged out",
-                "logged_out_at": datetime.utcnow().isoformat()
+                "logged_out_at": datetime.now(timezone.utc).isoformat()
             }
             
         except HTTPException:

@@ -28,7 +28,7 @@ from app.schemas.rag_schemas import (
 )
 from app.models.session_soap_notes import SessionSoapNotes
 from app.models.patient_visit_sessions import PatientVisitSessions
-from app.models.patients import Patients
+from app.models.users import User
 from app.database.db import async_session_maker
 
 logger = structlog.get_logger(__name__)
@@ -539,7 +539,7 @@ Answer:"""
         """Get basic patient information for context."""
         async with async_session_maker() as session:
             try:
-                stmt = select(Patients).where(Patients.id == patient_id)
+                stmt = select(User).where(User.id == patient_id)
                 result = await session.execute(stmt)
                 patient = result.scalar_one_or_none()
                 
@@ -555,7 +555,7 @@ Answer:"""
         async with async_session_maker() as session:
             try:
                 # First try exact match
-                stmt = select(Patients).where(Patients.name.ilike(patient_name))
+                stmt = select(User).where(User.name.ilike(patient_name))
                 result = await session.execute(stmt)
                 patient = result.scalar_one_or_none()
                 
@@ -565,7 +565,7 @@ Answer:"""
                 # Try fuzzy matching for common typos
                 from difflib import SequenceMatcher
                 
-                stmt = select(Patients)
+                stmt = select(User)
                 result = await session.execute(stmt)
                 all_patients = result.fetchall()
                 
