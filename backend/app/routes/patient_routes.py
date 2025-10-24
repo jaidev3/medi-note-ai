@@ -40,7 +40,7 @@ async def create_patient(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.create_patient(patient_data)
+    return await user_controller.create_patient(patient_data, current_user)
 
 
 @router.get("", response_model=PatientListResponse, summary="List Patients")
@@ -65,7 +65,7 @@ async def list_patients(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.list_patients(page, page_size, search)
+    return await user_controller.list_patients(page, page_size, search, current_user)
 
 
 @router.get("/{patient_id}", response_model=PatientResponse, summary="Get Patient Details")
@@ -86,7 +86,7 @@ async def get_patient_details(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.get_patient(patient_id)
+    return await user_controller.get_patient(patient_id, current_user)
 
 
 @router.put("/{patient_id}", response_model=PatientResponse, summary="Update Patient")
@@ -109,7 +109,7 @@ async def update_patient(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.update_patient(patient_id, patient_data)
+    return await user_controller.update_patient(patient_id, patient_data, current_user)
 
 
 @router.get("/{patient_id}/visits", response_model=SessionListResponse, summary="Get Patient Visit History")

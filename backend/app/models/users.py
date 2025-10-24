@@ -1,7 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
-from sqlalchemy import Column, String, DateTime, Boolean, Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime, Boolean, Enum as SAEnum, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.ext.declarative import declarative_base
 from app.database.db import Base
 from enum import Enum
@@ -24,7 +24,7 @@ class ProfessionalRole(str, Enum):
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     phone_number = Column(String, nullable=True)
@@ -37,6 +37,12 @@ class User(Base):
     address = Column(String, nullable=True)
     department = Column(String, nullable=True)
     employee_id = Column(String, nullable=True, unique=True)
+    # If a professional creates a patient, store which professional (users.id) created it.
+    created_by_professional_id = Column(
+        PostgresUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     
     
     # Relationships

@@ -47,7 +47,7 @@ async def create_session(
     if not session_data.professional_id:
         session_data.professional_id = current_user.id
     
-    return await user_controller.create_session(session_data)
+    return await user_controller.create_session(session_data, current_user)
 
 
 @router.get("", response_model=SessionListResponse, summary="List Sessions")
@@ -101,7 +101,7 @@ async def get_session_details(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.get_session(session_id)
+    return await user_controller.get_session(session_id, current_user)
 
 
 @router.put("/{session_id}", response_model=SessionResponse, summary="Update Session")
@@ -124,7 +124,7 @@ async def update_session(
     Requires:
         Valid JWT access token in Authorization header
     """
-    return await user_controller.update_session(session_id, session_data)
+    return await user_controller.update_session(session_id, session_data, current_user)
 
 
 @router.delete("/{session_id}", summary="Delete Session")
@@ -145,7 +145,7 @@ async def delete_session(
     Requires:
         Valid JWT access token in Authorization header
     """
-    deleted = await user_controller.delete_session(session_id)
+    deleted = await user_controller.delete_session(session_id, current_user)
     if deleted:
         return {"message": "Session deleted successfully"}
     else:

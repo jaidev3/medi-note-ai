@@ -14,6 +14,8 @@ from app.schemas.user_schemas import (
     SessionCreateRequest, SessionUpdateRequest, SessionResponse, SessionListResponse,
     UserStatsResponse
 )
+from app.schemas.auth_schemas import UserRead
+from app.models.users import UserRole
 from app.services.user_service import UserService
 
 logger = structlog.get_logger(__name__)
@@ -26,7 +28,7 @@ class UserController:
         """Initialize user controller."""
         self.user_service = UserService()
     
-    async def create_patient(self, patient_data: PatientCreateRequest) -> PatientResponse:
+    async def create_patient(self, patient_data: PatientCreateRequest, current_user: UserRead) -> PatientResponse:
         """
         Create a new patient.
         
@@ -41,7 +43,10 @@ class UserController:
         """
         try:
             logger.info("Creating new patient", name=patient_data.name)
-            return await self.user_service.create_patient(patient_data)
+            created_by = None
+            if current_user and current_user.role == UserRole.PROFESSIONAL:
+                created_by = current_user.id
+            return await self.user_service.create_patient(patient_data, created_by_professional_id=created_by)
             
         except ValueError as e:
             logger.warning("Patient creation validation error", error=str(e))
@@ -56,7 +61,7 @@ class UserController:
                 detail="Failed to create patient"
             )
     
-    async def get_patient(self, patient_id: uuid.UUID) -> PatientResponse:
+    async def get_patient(self, patient_id: uuid.UUID, current_user: UserRead) -> PatientResponse:
         """
         Get patient by ID.
         
@@ -70,7 +75,7 @@ class UserController:
             HTTPException: If patient not found
         """
         try:
-            patient = await self.user_service.get_patient(patient_id)
+            patient = await self.user_service.get_patient(patient_id, current_professional_id=current_user.id, current_user_role=current_user.role)
             if not patient:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -90,7 +95,8 @@ class UserController:
     async def update_patient(
         self,
         patient_id: uuid.UUID,
-        patient_data: PatientUpdateRequest
+        patient_data: PatientUpdateRequest,
+        current_user: UserRead = None
     ) -> PatientResponse:
         """
         Update patient information.
@@ -106,7 +112,7 @@ class UserController:
             HTTPException: If patient not found or update fails
         """
         try:
-            updated_patient = await self.user_service.update_patient(patient_id, patient_data)
+            updated_patient = await self.user_service.update_patient(patient_id, patient_data, current_professional_id=(current_user.id if current_user else None), current_user_role=(current_user.role if current_user else None))
             if not updated_patient:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -133,7 +139,8 @@ class UserController:
         self,
         page: int = 1,
         page_size: int = 20,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        current_user: UserRead = None
     ) -> PatientListResponse:
         """
         List patients with pagination and search.
@@ -163,7 +170,12 @@ class UserController:
                     detail="Page size must be between 1 and 100"
                 )
             
-            return await self.user_service.list_patients(page, page_size, search)
+            prof_id = None
+            prof_role = None
+            if current_user:
+                prof_id = current_user.id
+                prof_role = current_user.role
+            return await self.user_service.list_patients(page, page_size, search, professional_id=prof_id, current_user_role=prof_role)
             
         except HTTPException:
             raise
@@ -174,7 +186,7 @@ class UserController:
                 detail="Failed to list patients"
             )
     
-    async def create_session(self, session_data: SessionCreateRequest) -> SessionResponse:
+    async def create_session(self, session_data: SessionCreateRequest, current_user: UserRead) -> SessionResponse:
         """
         Create a new patient visit session.
         
@@ -250,7 +262,7 @@ class UserController:
                 detail="Failed to list sessions"
             )
     
-    async def get_session(self, session_id: uuid.UUID) -> SessionResponse:
+    async def get_session(self, session_id: uuid.UUID, current_user: UserRead) -> SessionResponse:
         """
         Get session by ID.
         
@@ -264,7 +276,7 @@ class UserController:
             HTTPException: If session not found or retrieval fails
         """
         try:
-            session = await self.user_service.get_session(session_id)
+            session = await self.user_service.get_session(session_id, current_professional_id=current_user.id, current_user_role=current_user.role)
             if not session:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -284,7 +296,8 @@ class UserController:
     async def update_session(
         self,
         session_id: uuid.UUID,
-        session_data: SessionUpdateRequest
+        session_data: SessionUpdateRequest,
+        current_user: UserRead = None
     ) -> SessionResponse:
         """
         Update session information.
@@ -300,7 +313,7 @@ class UserController:
             HTTPException: If session not found or update fails
         """
         try:
-            session = await self.user_service.update_session(session_id, session_data)
+            session = await self.user_service.update_session(session_id, session_data, current_professional_id=(current_user.id if current_user else None), current_user_role=(current_user.role if current_user else None))
             if not session:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -317,7 +330,7 @@ class UserController:
                 detail="Failed to update session"
             )
     
-    async def delete_session(self, session_id: uuid.UUID) -> bool:
+    async def delete_session(self, session_id: uuid.UUID, current_user: UserRead = None) -> bool:
         """
         Delete session by ID.
         
@@ -331,7 +344,7 @@ class UserController:
             HTTPException: If deletion fails
         """
         try:
-            return await self.user_service.delete_session(session_id)
+            return await self.user_service.delete_session(session_id, current_professional_id=(current_user.id if current_user else None), current_user_role=(current_user.role if current_user else None))
             
         except Exception as e:
             logger.error("Delete session error", error=str(e))

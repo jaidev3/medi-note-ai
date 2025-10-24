@@ -28,7 +28,7 @@ logger = structlog.get_logger(__name__)
 class UserService:
     """Service for user and patient management."""
     
-    async def create_patient(self, request: PatientCreateRequest) -> PatientResponse:
+    async def create_patient(self, request: PatientCreateRequest, created_by_professional_id: Optional[uuid.UUID] = None) -> PatientResponse:
         """
         Create a new patient.
         
@@ -53,13 +53,14 @@ class UserService:
                     if existing_patient:
                         raise ValueError("Patient with this email already exists")
                 
-                # Create new patient
+                # Create new patient and set creator professional if provided
                 patient = User(
                     name=request.name,
                     email=request.email.lower() if request.email else None,
                     phone_number=request.phone,
                     address=request.address,
-                    role=UserRole.PATIENT
+                    role=UserRole.PATIENT,
+                    created_by_professional_id=created_by_professional_id
                 )
                 
                 session.add(patient)
@@ -85,7 +86,7 @@ class UserService:
                 logger.error("❌ Failed to create patient", error=str(e))
                 raise
     
-    async def get_patient(self, patient_id: uuid.UUID) -> Optional[PatientResponse]:
+    async def get_patient(self, patient_id: uuid.UUID, current_professional_id: Optional[uuid.UUID] = None, current_user_role: Optional[UserRole] = None) -> Optional[PatientResponse]:
         """
         Get patient by ID.
         
@@ -103,6 +104,12 @@ class UserService:
                 
                 if not patient:
                     return None
+
+                # If requesting user is a professional, ensure they only access patients they created
+                if current_user_role == UserRole.PROFESSIONAL and current_professional_id is not None:
+                    if patient.created_by_professional_id and patient.created_by_professional_id != current_professional_id:
+                        # hide patient from other professionals
+                        return None
                 
                 # Get visit statistics
                 visit_count_stmt = select(func.count(PatientVisitSessions.session_id)).where(
@@ -134,7 +141,7 @@ class UserService:
                 logger.error("❌ Failed to get patient", error=str(e), patient_id=str(patient_id))
                 return None
     
-    async def update_patient(self, patient_id: uuid.UUID, request: PatientUpdateRequest) -> Optional[PatientResponse]:
+    async def update_patient(self, patient_id: uuid.UUID, request: PatientUpdateRequest, current_professional_id: Optional[uuid.UUID] = None, current_user_role: Optional[UserRole] = None) -> Optional[PatientResponse]:
         """
         Update patient information.
         
@@ -153,6 +160,11 @@ class UserService:
                 
                 if not patient:
                     return None
+
+                # Only allow professionals to update patients they own
+                if current_user_role == UserRole.PROFESSIONAL and current_professional_id is not None:
+                    if patient.created_by_professional_id and patient.created_by_professional_id != current_professional_id:
+                        return None
                 
                 # Update fields if provided
                 if request.name is not None:
@@ -183,14 +195,14 @@ class UserService:
                 logger.info("✅ Patient updated successfully", patient_id=str(patient_id))
                 
                 # Return updated patient with statistics
-                return await self.get_patient(patient_id)
+                return await self.get_patient(patient_id, current_professional_id=current_professional_id, current_user_role=current_user_role)
                 
             except Exception as e:
                 await session.rollback()
                 logger.error("❌ Failed to update patient", error=str(e), patient_id=str(patient_id))
                 raise
     
-    async def list_patients(self, page: int = 1, page_size: int = 20, search: Optional[str] = None) -> PatientListResponse:
+    async def list_patients(self, page: int = 1, page_size: int = 20, search: Optional[str] = None, professional_id: Optional[uuid.UUID] = None, current_user_role: Optional[UserRole] = None) -> PatientListResponse:
         """
         List patients with pagination and search.
         
@@ -206,6 +218,10 @@ class UserService:
             try:
                 # Build base query
                 stmt = select(User).where(User.role == UserRole.PATIENT)
+
+                # If current user is a professional, only show patients created by them
+                if current_user_role == UserRole.PROFESSIONAL and professional_id is not None:
+                    stmt = stmt.where(User.created_by_professional_id == professional_id)
 
                 # Add search filter
                 if search:
@@ -432,7 +448,7 @@ class UserService:
                 logger.error("❌ Failed to list sessions", error=str(e))
                 raise
     
-    async def get_session(self, session_id: uuid.UUID) -> Optional[SessionResponse]:
+    async def get_session(self, session_id: uuid.UUID, current_professional_id: Optional[uuid.UUID] = None, current_user_role: Optional[UserRole] = None) -> Optional[SessionResponse]:
         """
         Get session by ID.
 
@@ -454,6 +470,11 @@ class UserService:
                     return None
 
                 visit_session, patient_name = session_data
+
+                # If current user is a professional, ensure they can access only their sessions
+                if current_user_role == UserRole.PROFESSIONAL and current_professional_id is not None:
+                    if visit_session.professional_id and visit_session.professional_id != current_professional_id:
+                        return None
 
                 # Get document count
                 doc_count_stmt = select(func.count(UploadedDocuments.document_id)).where(
@@ -489,7 +510,9 @@ class UserService:
     async def update_session(
         self,
         session_id: uuid.UUID,
-        request: SessionUpdateRequest
+        request: SessionUpdateRequest,
+        current_professional_id: Optional[uuid.UUID] = None,
+        current_user_role: Optional[UserRole] = None
     ) -> Optional[SessionResponse]:
         """
         Update session information.
@@ -511,6 +534,11 @@ class UserService:
                 
                 if not visit_session:
                     return None
+
+                # Only allow professional to update their own sessions
+                if current_user_role == UserRole.PROFESSIONAL and current_professional_id is not None:
+                    if visit_session.professional_id and visit_session.professional_id != current_professional_id:
+                        return None
                 
                 # Update fields
                 if request.visit_date is not None:
@@ -559,7 +587,7 @@ class UserService:
                 logger.error("❌ Failed to update session", error=str(e))
                 raise
     
-    async def delete_session(self, session_id: uuid.UUID) -> bool:
+    async def delete_session(self, session_id: uuid.UUID, current_professional_id: Optional[uuid.UUID] = None, current_user_role: Optional[UserRole] = None) -> bool:
         """
         Delete session by ID.
         
@@ -579,6 +607,11 @@ class UserService:
                 
                 if not visit_session:
                     return False
+
+                # Only allow professional to delete their own sessions
+                if current_user_role == UserRole.PROFESSIONAL and current_professional_id is not None:
+                    if visit_session.professional_id and visit_session.professional_id != current_professional_id:
+                        return False
                 
                 await session.delete(visit_session)
                 await session.commit()
